@@ -1,5 +1,5 @@
 import React from "react";
-import Calendar from "./components/Calendar";
+import Calendar from "./components/Calendar"; // This will import from the index.jsx file in the Calendar folder
 
 function App() {
   return (
