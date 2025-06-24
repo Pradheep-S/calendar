@@ -39,6 +39,7 @@ const Calendar = () => {
   });
   const [showEventPopup, setShowEventPopup] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [activeId, setActiveId] = useState(null);
 
   // Configure DnD sensors
   const sensors = useSensors(
@@ -190,8 +191,6 @@ const Calendar = () => {
       day = day.add(1, "day");
     }
     
-    const [activeId, setActiveId] = useState(null);
-
     return (
       <DndContext 
         sensors={sensors}
@@ -1282,7 +1281,6 @@ const Calendar = () => {
           }}
         >
           <div 
-            className="w-full h-1 absolute top-0 left-0 rounded-t-md"
             style={{ backgroundColor: tooltip.event.color || "#4285F4" }}
           ></div>
           <div className="mt-2">
