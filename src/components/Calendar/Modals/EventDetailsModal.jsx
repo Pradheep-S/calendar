@@ -206,7 +206,7 @@ const EventDetailsModal = ({
                 }`}
               >
                 <FaCheck className="mr-1" size={12} />
-                {selectedEvent.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                {selectedEvent.completed ? 'Mark Undone' : 'Mark Complete'}
               </button>
               
               <button

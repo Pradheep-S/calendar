@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import dayjs from 'dayjs';
 import { FaCheck, FaTrash } from "react-icons/fa";
 
-const EditEventModal = ({
+const EditEventModal = ({ 
   selectedEvent,
   isEditing,
   setIsEditing,
@@ -45,9 +45,29 @@ const EditEventModal = ({
     return { hasConflicts: false };
   };
 
+  // Handle escape key press to close modal
+  useEffect(() => {
+    const handleEscKey = (e) => {
+      if (e.key === 'Escape') {
+        setShowEventPopup(false);
+        setIsEditing(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscKey);
+    
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      document.removeEventListener('keydown', handleEscKey);
+      document.body.style.overflow = 'auto';
+    };
+  }, [setShowEventPopup, setIsEditing]);
+
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn p-3 touch-none"
       onClick={(e) => {
         // Close popup when clicking outside
         if (e.target === e.currentTarget) {
@@ -57,13 +77,13 @@ const EditEventModal = ({
       }}
     >
       <div 
-        className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 animate-scaleIn"
+        className="bg-white rounded-lg shadow-lg w-full max-w-[90%] sm:max-w-md p-2 sm:p-4 animate-scaleIn max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold flex items-center">
+        <div className="flex justify-between items-center mb-2 sticky top-0 bg-white pb-1">
+          <h3 className="text-sm sm:text-base font-semibold flex items-center">
             <div 
-              className="w-4 h-4 rounded-full mr-2" 
+              className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full mr-1.5" 
               style={{ backgroundColor: editedEvent.color || "#4285F4" }}
             ></div>
             Edit Event
@@ -74,39 +94,40 @@ const EditEventModal = ({
               setIsEditing(false);
             }} 
             className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full p-1 transition-colors duration-200"
+            aria-label="Close"
           >
             &times;
           </button>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-2 sm:space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Title</label>
+            <label className="block text-xs font-medium text-gray-700">Title</label>
             <input
               type="text"
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs sm:text-sm"
               value={editedEvent.title}
               onChange={(e) => setEditedEvent({...editedEvent, title: e.target.value})}
               placeholder="Event title"
             />
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Date</label>
+              <label className="block text-xs font-medium text-gray-700">Date</label>
               <input
                 type="date"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
                 value={editedEvent.date}
                 onChange={(e) => setEditedEvent({...editedEvent, date: e.target.value})}
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700">Time</label>
+              <label className="block text-xs font-medium text-gray-700">Time</label>
               <input
                 type="time"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
                 value={editedEvent.time}
                 onChange={(e) => setEditedEvent({...editedEvent, time: e.target.value})}
               />
@@ -114,9 +135,9 @@ const EditEventModal = ({
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Duration</label>
+            <label className="block text-xs font-medium text-gray-700">Duration</label>
             <select
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
               value={editedEvent.duration}
               onChange={(e) => setEditedEvent({...editedEvent, duration: e.target.value})}
             >
@@ -130,12 +151,12 @@ const EditEventModal = ({
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Color</label>
-            <div className="flex space-x-2 mt-1">
+            <label className="block text-xs font-medium text-gray-700">Color</label>
+            <div className="flex flex-wrap gap-1 sm:gap-1.5 mt-1">
               {["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#8430CE", "#F06292"].map(color => (
                 <div 
                   key={color}
-                  className={`w-8 h-8 rounded-full cursor-pointer ${editedEvent.color === color ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
+                  className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full cursor-pointer ${editedEvent.color === color ? 'ring-2 ring-offset-1 ring-blue-500' : ''}`}
                   style={{ backgroundColor: color }}
                   onClick={() => setEditedEvent({...editedEvent, color})}
                 ></div>
@@ -144,10 +165,10 @@ const EditEventModal = ({
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
+            <label className="block text-xs font-medium text-gray-700">Description (optional)</label>
             <textarea
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              rows="3"
+              className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
+              rows="2"
               value={editedEvent.description}
               onChange={(e) => setEditedEvent({...editedEvent, description: e.target.value})}
               placeholder="Add description or notes"
@@ -158,43 +179,18 @@ const EditEventModal = ({
             <input
               type="checkbox"
               id="edit-completed"
-              className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               checked={editedEvent.completed}
               onChange={(e) => setEditedEvent({...editedEvent, completed: e.target.checked})}
             />
-            <label htmlFor="edit-completed" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="edit-completed" className="ml-1.5 block text-xs text-gray-700">
               Mark as completed
             </label>
           </div>
         </div>
         
-        <div className="mt-6 flex justify-between">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => {
-                setIsEditing(false);
-                setEditedEvent(selectedEvent); // Reset to original
-              }}
-              className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            
-            <button
-              onClick={() => {
-                if (window.confirm('Are you sure you want to delete this event?')) {
-                  deleteEvent(selectedEvent.id);
-                  setShowEventPopup(false);
-                  setIsEditing(false);
-                }
-              }}
-              className="px-3 py-1 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-all duration-200 flex items-center"
-            >
-              <FaTrash className="mr-1" size={12} />
-              Delete
-            </button>
-          </div>
-          
+        {/* Always column-wise buttons for better mobile experience */}
+        <div className="mt-3 sm:mt-4 flex flex-col gap-2">
           <button
             onClick={() => {
               // Check for conflicts before saving
@@ -210,32 +206,56 @@ const EditEventModal = ({
                 handleUpdateEvent();
               }
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-xs font-medium"
             disabled={!editedEvent.title.trim()}
           >
             Save Changes
           </button>
+          
+          <button
+            onClick={() => {
+              setIsEditing(false);
+              setEditedEvent(selectedEvent); // Reset to original
+            }}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 text-xs"
+          >
+            Cancel
+          </button>
+          
+          <button
+            onClick={() => {
+              if (window.confirm('Are you sure you want to delete this event?')) {
+                deleteEvent(selectedEvent.id);
+                setShowEventPopup(false);
+                setIsEditing(false);
+              }
+            }}
+            className="px-3 py-1.5 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-all duration-200 flex items-center justify-center text-xs"
+          >
+            <FaTrash className="mr-1" size={10} />
+            Delete
+          </button>
         </div>
         
-        {/* Preview section */}
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <h4 className="text-sm font-medium text-gray-500 mb-2">Event Preview</h4>
-          <div className="p-3 rounded-md" style={{ backgroundColor: `${editedEvent.color}15` }}>
+        {/* Preview section - completely hidden on mobile */}
+        <div className="hidden sm:block mt-4 pt-3 border-t border-gray-200">
+          <h4 className="text-xs font-medium text-gray-500 mb-2">Event Preview</h4>
+          <div className="p-2 rounded-md" style={{ backgroundColor: `${editedEvent.color}15` }}>
             <div className="flex items-start">
               <div 
-                className="w-3 h-3 rounded-full mt-1 mr-2 flex-shrink-0" 
+                className="w-2 h-2 rounded-full mt-1 mr-1.5 flex-shrink-0" 
                 style={{ backgroundColor: editedEvent.color || "#4285F4" }}
               ></div>
               <div>
-                <div className={`font-medium ${editedEvent.completed ? 'line-through text-gray-500' : ''}`}>
+                <div className={`font-medium text-xs ${editedEvent.completed ? 'line-through text-gray-500' : ''}`}>
                   {editedEvent.title || "Untitled Event"}
                 </div>
-                <div className="text-xs text-gray-600 mt-1">
+                <div className="text-xs text-gray-600 mt-0.5">
                   {dayjs(editedEvent.date).format("MMM D, YYYY")} • 
                   {editedEvent.time ? ` ${getEventTime(editedEvent)} (${editedEvent.duration})` : ' All day'}
                 </div>
                 {editedEvent.description && (
-                  <div className="text-xs text-gray-600 mt-1 line-clamp-1">{editedEvent.description}</div>
+                  <div className="text-xs text-gray-600 mt-0.5 line-clamp-1">{editedEvent.description}</div>
                 )}
               </div>
             </div>

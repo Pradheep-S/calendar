@@ -1,414 +1,179 @@
-import React, { useEffect, useState } from "react";
-import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-import { FaChevronLeft, FaChevronRight, FaPlus } from "react-icons/fa";
+import React, { useRef, useEffect, useState } from 'react';
+import dayjs from 'dayjs';
+import { FaCheck, FaTrash } from "react-icons/fa";
 
-// Add required dayjs plugins
-dayjs.extend(isBetween);
-dayjs.extend(isSameOrBefore);
-dayjs.extend(isSameOrAfter);
-
-const views = ["Month", "Week", "Day", "Agenda"];
-
-const Calendar = () => {
-  const [currentDate, setCurrentDate] = useState(dayjs());
-  const [events, setEvents] = useState([]);
-  const [activeView, setActiveView] = useState("Month");
-  const [showEventModal, setShowEventModal] = useState(false);
-  const [newEvent, setNewEvent] = useState({
-    title: "",
-    date: currentDate.format("YYYY-MM-DD"),
-    time: "09:00",
-    duration: "1h",
-    description: "",
-    color: "#4285F4" // Google blue
-  });
-
+const WeekView = ({ 
+  currentDate, 
+  events, 
+  handleOpenModal, 
+  toggleEventCompletion, 
+  deleteEvent, 
+  setSelectedEvent, 
+  setShowEventPopup, 
+  setTooltip,
+  showConflictDetails,
+  detectEventConflicts,
+  handlePrev,
+  handleNext
+}) => {
+  const startOfWeek = currentDate.startOf("week");
+  const weekDays = [];
+  const hours = Array.from({ length: 24 }, (_, i) => i);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // For swipe navigation
+  const containerRef = useRef(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  
+  // Check if the device is mobile
   useEffect(() => {
-    fetch("/events.json")
-      .then(res => res.json())
-      .then(data => setEvents(data));
-  }, []);
-
-  // Get the time portion for rendering events
-  const getEventTime = (event) => {
-    if (!event.time) return "";
-    const [hours, minutes] = event.time.split(":");
-    const ampm = hours >= 12 ? "pm" : "am";
-    const hour = hours % 12 || 12;
-    return `${hour}:${minutes} ${ampm}`;
-  };
-
-  // Handlers for navigation
-  const handlePrev = () => {
-    if (activeView === "Month") {
-      setCurrentDate(prev => prev.subtract(1, "month"));
-    } else if (activeView === "Week") {
-      setCurrentDate(prev => prev.subtract(1, "week"));
-    } else if (activeView === "Day") {
-      setCurrentDate(prev => prev.subtract(1, "day"));
-    }
-  };
-
-  const handleNext = () => {
-    if (activeView === "Month") {
-      setCurrentDate(prev => prev.add(1, "month"));
-    } else if (activeView === "Week") {
-      setCurrentDate(prev => prev.add(1, "week"));
-    } else if (activeView === "Day") {
-      setCurrentDate(prev => prev.add(1, "day"));
-    }
-  };
-
-  const handleToday = () => setCurrentDate(dayjs());
-
-  // Modal handlers
-  const handleOpenModal = (date) => {
-    setNewEvent({
-      ...newEvent,
-      date: date.format("YYYY-MM-DD")
-    });
-    setShowEventModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowEventModal(false);
-  };
-
-  const handleCreateEvent = () => {
-    const createdEvent = {
-      ...newEvent,
-      id: Date.now() // Simple ID generation
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
     };
-    setEvents([...events, createdEvent]);
-    setShowEventModal(false);
-    setNewEvent({
-      title: "",
-      date: currentDate.format("YYYY-MM-DD"),
-      time: "09:00",
-      duration: "1h",
-      description: "",
-      color: "#4285F4"
-    });
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup event listener
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+  
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+  
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+  
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      handleNext(); // Scroll to next week
+    }
+    if (isRightSwipe) {
+      handlePrev(); // Scroll to previous week
+    }
   };
 
-  // Calendar generation based on view
-  const generateMonthView = () => {
-    const startDay = currentDate.startOf("month").startOf("week");
-    const endDay = currentDate.endOf("month").endOf("week");
-
-    const days = [];
-    let day = startDay;
-
-    while (day.isSameOrBefore(endDay, "day")) {
-      days.push(day);
-      day = day.add(1, "day");
+  // Generate the days for the current week
+  for (let i = 0; i < 7; i++) {
+    weekDays.push(startOfWeek.add(i, "day"));
+  }
+  
+  // Add fade animation when transitioning between weeks
+  useEffect(() => {
+    if (containerRef.current) {
+      const animateTransition = () => {
+        containerRef.current.classList.add('animate-fadeIn');
+        setTimeout(() => {
+          containerRef.current.classList.remove('animate-fadeIn');
+        }, 300);
+      };
+      animateTransition();
     }
+  }, [currentDate]);
 
-    return (
-      <div className="grid grid-cols-7 gap-1">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-          <div key={day} className="font-medium text-center text-gray-500 text-sm py-2 border-b">
-            {day}
-          </div>
-        ))}
+  // Single letter day names with tooltip for full name
+  const getDayLetter = (day) => {
+    return day.format("ddd").charAt(0);
+  };
 
-        {days.map(date => {
-          const dayEvents = events.filter(e => e.date === date.format("YYYY-MM-DD"));
-          const isToday = date.isSame(dayjs(), "day");
-          const isCurrentMonth = date.month() === currentDate.month();
+  // Handle day click differently based on mobile/desktop
+  const handleDayHeaderClick = (day) => {
+    if (!isMobile) {
+      // Only open modal on desktop
+      handleOpenModal(day);
+    }
+    // On mobile, we don't open the modal
+  };
 
+  // Handle hour cell click differently based on mobile/desktop
+  const handleHourCellClick = (day, hour) => {
+    if (!isMobile) {
+      // Only open modal on desktop
+      handleOpenModal(day.hour(hour));
+    }
+    // On mobile, we don't open the modal
+  };
+
+  return (
+    <div 
+      className="overflow-auto max-h-[800px] touch-pan-y"
+      ref={containerRef}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Week header with days - optimize for mobile */}
+      <div className="grid grid-cols-8 border-b">
+        <div className="p-2 border-r"></div>
+        {weekDays.map(day => {
+          const isToday = day.isSame(dayjs(), "day");
           return (
             <div 
-              key={date.format()} 
-              className={`min-h-[100px] p-1 border relative transition-all hover:bg-gray-50 
-                ${isToday ? "bg-blue-50 border-blue-300" : ""} 
-                ${!isCurrentMonth ? "text-gray-400 bg-gray-50" : ""}`}
-              onClick={() => handleOpenModal(date)}
+              key={day.format()} 
+              className={`p-2 text-center border-r ${isToday ? "bg-blue-50" : ""}`}
+              onClick={() => handleDayHeaderClick(day)}
             >
-              <div className={`text-sm font-semibold text-right p-1 ${isToday ? "text-blue-600" : ""}`}>
-                {date.date()}
+              {/* Single letter day name on mobile, short name on desktop */}
+              <div className="font-medium" title={day.format("dddd")}>
+                {isMobile ? getDayLetter(day) : day.format("ddd")}
               </div>
-              <div className="overflow-y-auto max-h-[80px]">
-                {(() => {
-                  const styles = getMonthEventStyles(dayEvents);
-                  return (
-                    <>
-                      {dayEvents.slice(0, styles.maxToShow).map((event, idx) => (
-                        <div 
-                          key={idx} 
-                          className="text-xs p-1 mb-1 rounded truncate flex items-center" 
-                          style={{ 
-                            backgroundColor: event.color || "#4285F4",
-                            color: "white"
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Here you could add code to view/edit the event
-                            alert(`Event: ${event.title}\nTime: ${getEventTime(event)}\nDescription: ${event.description || 'No description'}`);
-                          }}
-                        >
-                          <div className="w-1.5 h-1.5 rounded-full bg-white mr-1 flex-shrink-0"></div>
-                          <div className="truncate">
-                            {getEventTime(event)} {event.title}
-                          </div>
-                        </div>
-                      ))}
-                      {styles.hasMore && (
-                        <div 
-                          className="text-xs p-1 text-gray-600 cursor-pointer hover:bg-gray-100 rounded"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Show all events for this day
-                            alert(`${styles.moreCount} more events on ${date.format("MMMM D, YYYY")}`);
-                          }}
-                        >
-                          + {styles.moreCount} more
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+              <div 
+                className={`${isMobile ? "text-lg" : "text-xl"} ${
+                  isToday 
+                    ? "bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto" 
+                    : ""
+                }`}
+              >
+                {day.date()}
               </div>
             </div>
           );
         })}
       </div>
-    );
-  };
 
-  const getMonthEventStyles = (dayEvents) => {
-    // Return styles for events based on count
-    if (dayEvents.length > 3) {
-      return {
-        maxToShow: 2,
-        hasMore: true,
-        moreCount: dayEvents.length - 2
-      };
-    }
-    return {
-      maxToShow: dayEvents.length,
-      hasMore: false,
-      moreCount: 0
-    };
-  };
-
-  const generateWeekView = () => {
-    const startOfWeek = currentDate.startOf("week");
-    const weekDays = [];
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-
-    for (let i = 0; i < 7; i++) {
-      weekDays.push(startOfWeek.add(i, "day"));
-    }
-
-    return (
-      <div className="overflow-auto max-h-[800px]">
-        <div className="grid grid-cols-8 border-b">
-          <div className="p-2 border-r"></div>
-          {weekDays.map(day => {
-            const isToday = day.isSame(dayjs(), "day");
-            return (
-              <div 
-                key={day.format()} 
-                className={`p-2 text-center border-r ${isToday ? "bg-blue-50" : ""}`}
-              >
-                <div className="font-medium">{day.format("ddd")}</div>
-                <div className={`text-xl ${isToday ? "bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto" : ""}`}>
-                  {day.date()}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="grid grid-cols-8">
-          {/* Time column */}
-          <div className="border-r">
-            {hours.map(hour => (
-              <div key={hour} className="h-12 border-b text-xs text-right pr-2 -mt-3">
-                {hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}
-              </div>
-            ))}
-          </div>
-
-          {/* Days columns */}
-          {weekDays.map(day => (
-            <div key={day.format()} className="border-r relative">
-              {hours.map(hour => (
-                <div key={hour} className="h-12 border-b" onClick={() => handleOpenModal(day.hour(hour))}>
-                </div>
-              ))}
-
-              {/* Events */}
-              {events
-                .filter(event => event.date === day.format("YYYY-MM-DD"))
-                .map((event, idx) => {
-                  const [eventHour, eventMinute] = event.time ? event.time.split(":").map(Number) : [0, 0];
-                  const durationMatch = event.duration ? event.duration.match(/(\d+)([hm])/) : null;
-                  const durationHours = durationMatch ? 
-                    (durationMatch[2] === 'h' ? Number(durationMatch[1]) : Number(durationMatch[1]) / 60) : 1;
-                  
-                  // Check for conflicts
-                  const conflicts = handleEventConflicts(events, day).find(e => e.id === event.id);
-                  const hasConflicts = conflicts && conflicts.conflictCount > 0;
-                  
-                  return (
-                    <div 
-                      key={idx}
-                      className={`absolute rounded px-2 overflow-hidden text-white text-xs ${hasConflicts ? 'border-2 border-yellow-300' : ''}`}
-                      style={{
-                        top: `${eventHour * 48 + eventMinute * 0.8}px`,
-                        height: `${durationHours * 48}px`,
-                        left: "2px",
-                        right: "2px",
-                        backgroundColor: event.color || "#4285F4",
-                        zIndex: 10
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (hasConflicts) {
-                          alert(`Warning: This event overlaps with ${conflicts.conflictCount} other event(s)`);
-                        }
-                      }}
-                    >
-                      <div className="font-medium flex justify-between">
-                        <span>{event.title}</span>
-                        {hasConflicts && <span className="text-yellow-300">⚠️</span>}
-                      </div>
-                      <div>{getEventTime(event)}</div>
-                    </div>
-                  );
-                })}
+      <div className="grid grid-cols-8">
+        {/* Time column */}
+        <div className="border-r">
+          {hours.map(hour => (
+            <div key={hour} className="h-12 border-b text-xs text-right pr-2 -mt-3 text-gray-500">
+              {hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}
             </div>
           ))}
         </div>
-      </div>
-    );
-  };
 
-  const handleEventConflicts = (events, date) => {
-    // Group events by time slots to identify conflicts
-    const timeSlotMap = {};
-    
-    events.forEach(event => {
-      if (event.date !== date.format("YYYY-MM-DD") || !event.time) return;
-      
-      const [hours, minutes] = event.time.split(':').map(Number);
-      const durationMatch = event.duration.match(/(\d+)([hm])/);
-      const durationHours = durationMatch ? 
-        (durationMatch[2] === 'h' ? Number(durationMatch[1]) : Number(durationMatch[1])/60) : 1;
-      
-      // Calculate start and end times in decimal hours
-      const startTime = hours + (minutes / 60);
-      const endTime = startTime + durationHours;
-      
-      // Create 15-minute time slots for this event
-      for (let t = startTime; t < endTime; t += 0.25) {
-        const timeSlot = t.toFixed(2);
-        if (!timeSlotMap[timeSlot]) {
-          timeSlotMap[timeSlot] = [];
-        }
-        timeSlotMap[timeSlot].push(event);
-      }
-    });
-    
-    // Analyze conflicts
-    const conflictGroups = {};
-    Object.values(timeSlotMap).forEach(eventsInSlot => {
-      if (eventsInSlot.length > 1) {
-        // We have a conflict
-        eventsInSlot.forEach(event => {
-          if (!conflictGroups[event.id]) {
-            conflictGroups[event.id] = {
-              event,
-              conflicts: new Set()
-            };
-          }
-          
-          // Add all other events in this slot as conflicts
-          eventsInSlot.forEach(otherEvent => {
-            if (otherEvent.id !== event.id) {
-              conflictGroups[event.id].conflicts.add(otherEvent.id);
-            }
-          });
-        });
-      }
-    });
-    
-    // Convert to array and add conflict count
-    return Object.values(conflictGroups).map(group => ({
-      ...group.event,
-      conflictCount: group.conflicts.size,
-      conflictIds: Array.from(group.conflicts)
-    }));
-  };
-
-  const generateDayView = () => {
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-    const todayEvents = events.filter(event => event.date === currentDate.format("YYYY-MM-DD"));
-    
-    return (
-      <div className="overflow-auto max-h-[800px]">
-        {/* Day header */}
-        <div className="py-3 px-4 border-b bg-gray-50">
-          <div className="flex items-center">
-            <div className={`flex flex-col items-center justify-center rounded-full ${
-              currentDate.isSame(dayjs(), "day") 
-                ? "bg-blue-600 text-white" 
-                : "text-gray-800"
-            } w-10 h-10 mr-4`}>
-              <span className="text-sm font-medium">{currentDate.format("D")}</span>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold">{currentDate.format("dddd")}</h3>
-              <div className="text-sm text-gray-600">{currentDate.format("MMMM D, YYYY")}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* All-day events */}
-        {todayEvents.filter(event => !event.time).length > 0 && (
-          <div className="border-b">
-            <div className="grid grid-cols-[80px_1fr]">
-              <div className="py-2 px-3 text-xs font-medium text-gray-500 border-r">ALL DAY</div>
-              <div className="p-1">
-                {todayEvents
-                  .filter(event => !event.time)
-                  .map((event, idx) => (
-                    <div 
-                      key={idx} 
-                      className="text-xs p-2 mb-1 rounded truncate" 
-                      style={{ 
-                        backgroundColor: event.color || "#4285F4",
-                        color: "white"
-                      }}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Time grid */}
-        <div className="grid grid-cols-[80px_1fr]">
-          {/* Time column */}
-          <div className="border-r">
+        {/* Days columns */}
+        {weekDays.map(day => (
+          <div key={day.format()} className="border-r relative">
+            {/* Hour blocks for interaction */}
             {hours.map(hour => (
-              <div key={hour} className="h-12 border-b text-xs text-right pr-2 -mt-3 text-gray-500">
-                {hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}
+              <div 
+                key={hour} 
+                className="h-12 border-b hover:bg-gray-50 relative cursor-pointer" 
+                onClick={() => handleHourCellClick(day, hour)}
+              >
+                {/* Half-hour guide */}
+                <div className="absolute left-0 right-0 top-1/2 border-t border-gray-100"></div>
               </div>
             ))}
-          </div>
 
-          {/* Day column with events */}
-          <div className="relative">
             {/* Current time indicator */}
-            {currentDate.isSame(dayjs(), "day") && (
+            {day.isSame(dayjs(), "day") && (
               <div 
                 className="absolute left-0 right-0 border-t border-red-500 z-20" 
                 style={{ 
@@ -419,22 +184,11 @@ const Calendar = () => {
               </div>
             )}
 
-            {/* Hour blocks */}
-            {hours.map(hour => (
-              <div 
-                key={hour} 
-                className="h-12 border-b hover:bg-gray-50 relative" 
-                onClick={() => handleOpenModal(currentDate.hour(hour))}
-              >
-                {/* Half-hour guide */}
-                <div className="absolute left-0 right-0 top-1/2 border-t border-gray-100"></div>
-              </div>
-            ))}
-
             {/* Events */}
-            {todayEvents
-              .filter(event => event.time)
+            {events
+              .filter(event => event.date === day.format("YYYY-MM-DD") && event.time)
               .map((event, idx) => {
+                // Parse time and calculate position
                 const [eventHour, eventMinute] = event.time.split(":").map(Number);
                 const durationMatch = event.duration.match(/(\d+)([hm])/);
                 const durationHours = durationMatch
@@ -447,10 +201,15 @@ const Calendar = () => {
                 const topPosition = eventHour * 48 + eventMinute * 0.8;
                 const height = durationHours * 48;
                 
+                // Check for conflicts
+                const conflicts = detectEventConflicts(events).find(e => e.id === event.id);
+                const hasConflicts = conflicts && conflicts.conflictCount > 0;
+                
                 // Check for overlapping events to adjust width
-                const overlappingEvents = todayEvents.filter(e => {
-                  if (e === event || !e.time) return false;
-                  const [eHour, eMinute] = e.time.split(":").map(Number);
+                const overlappingEvents = events.filter(e => {
+                  if (e.id === event.id || e.date !== day.format("YYYY-MM-DD") || !e.time) return false;
+                  
+                  const [eHour, eMinute] = e.time.split(':').map(Number);
                   const eDurationMatch = e.duration.match(/(\d+)([hm])/);
                   const eDurationHours = eDurationMatch
                     ? eDurationMatch[2] === 'h'
@@ -476,289 +235,139 @@ const Calendar = () => {
                   .filter(e => e.time <= event.time)
                   .length;
                 
+                // Adjust width for mobile to ensure events are visible
+                const mobileWidthAdjustment = isMobile ? "- 2px" : "- 4px";
+                
                 const width = totalOverlapping > 1 
-                  ? `calc(${100 / totalOverlapping}% - 4px)` 
-                  : 'calc(100% - 8px)';
+                  ? `calc(${100 / totalOverlapping}% ${mobileWidthAdjustment})` 
+                  : `calc(100% ${mobileWidthAdjustment})`;
                 const left = totalOverlapping > 1 
-                  ? `calc(${(overlapIndex * 100) / totalOverlapping}% + 4px)` 
-                  : '4px';
+                  ? `calc(${(overlapIndex * 100) / totalOverlapping}% + 2px)` 
+                  : '2px';
                 
                 return (
                   <div 
                     key={idx}
-                    className="absolute rounded overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                    className={`absolute rounded overflow-hidden shadow-sm hover:shadow-md transition-shadow group
+                      ${hasConflicts ? 'border-2 border-yellow-300' : ''}
+                      ${event.completed ? 'border border-white/30' : ''}
+                    `}
                     style={{
                       top: `${topPosition}px`,
                       height: `${height}px`,
                       left,
                       width,
-                      backgroundColor: event.color || "#4285F4",
+                      backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
+                      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none',
                       color: "white",
-                      zIndex: 10
+                      zIndex: 10,
+                      textDecoration: event.completed ? 'line-through' : 'none'
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Here you could add code to open event editing modal
+                      if (hasConflicts) {
+                        showConflictDetails(event, conflicts);
+                      } else {
+                        setSelectedEvent(event);
+                        setShowEventPopup(true);
+                      }
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isMobile) {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                        
+                        setTooltip({
+                          visible: true,
+                          event,
+                          position: {
+                            x: rect.left + (rect.width / 2),
+                            y: rect.top + scrollTop
+                          }
+                        });
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      if (!isMobile) {
+                        setTooltip({
+                          visible: false,
+                          event: null,
+                          position: { x: 0, y: 0 }
+                        });
+                      }
                     }}
                   >
                     <div className="p-2 h-full flex flex-col">
                       <div className="font-medium text-xs truncate">{event.title}</div>
-                      <div className="text-xs opacity-90">{getEventTime(event)}</div>
-                      {height > 60 && event.description && (
+                      <div className="text-xs opacity-90">
+                        {eventHour % 12 || 12}:{eventMinute.toString().padStart(2, '0')} {eventHour >= 12 ? 'pm' : 'am'}
+                      </div>
+                      {height > 60 && event.description && !isMobile && (
                         <div className="text-xs mt-1 line-clamp-2 opacity-90">{event.description}</div>
                       )}
+                      
+                      {/* Action buttons that appear on hover - simplified for mobile */}
+                      <div className={`absolute right-1 top-1 ${isMobile ? 'flex' : 'hidden group-hover:flex'} space-x-1 bg-black bg-opacity-30 backdrop-blur-sm rounded-full p-0.5`}>
+                        <button 
+                          className={`p-1 flex items-center justify-center rounded-full
+                            ${event.completed 
+                              ? 'bg-white text-green-600' 
+                              : 'bg-white text-gray-600 hover:text-green-600'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleEventCompletion(event.id);
+                          }}
+                          title={event.completed ? "Mark as not completed" : "Mark as completed"}
+                        >
+                          <FaCheck size={10} />
+                        </button>
+                        <button 
+                          className="p-1 flex items-center justify-center rounded-full bg-white text-gray-600 hover:text-red-600"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this event?')) {
+                              deleteEvent(event.id);
+                            }
+                          }}
+                          title="Delete event"
+                        >
+                          <FaTrash size={10} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
               })}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const generateAgendaView = () => {
-    // Group events by date
-    const eventsByDate = events.reduce((acc, event) => {
-      if (!acc[event.date]) {
-        acc[event.date] = [];
-      }
-      acc[event.date].push(event);
-      return acc;
-    }, {});
-
-    // Sort dates
-    const sortedDates = Object.keys(eventsByDate).sort();
-
-    return (
-      <div className="overflow-auto max-h-[800px]">
-        {sortedDates.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            No events scheduled
-          </div>
-        ) : (
-          sortedDates.map(date => {
-            const formattedDate = dayjs(date).format("dddd, MMMM D, YYYY");
-            const isToday = dayjs(date).isSame(dayjs(), "day");
-            
-            return (
-              <div key={date} className="mb-4">
-                <div className={`font-medium py-2 px-4 ${isToday ? "bg-blue-50" : "bg-gray-50"}`}>
-                  {formattedDate} {isToday && <span className="text-blue-600 font-bold">(Today)</span>}
-                </div>
-                <div>
-                  {eventsByDate[date].map((event, idx) => (
-                    <div key={idx} className="flex items-center p-3 border-b hover:bg-gray-50">
-                      <div 
-                        className="w-3 h-full mr-3 rounded-full" 
-                        style={{ backgroundColor: event.color || "#4285F4" }}
-                      ></div>
-                      <div>
-                        <div className="font-medium">{event.title}</div>
-                        <div className="text-sm text-gray-600">
-                          {getEventTime(event)} {event.duration && `• ${event.duration}`}
-                        </div>
-                        {event.description && (
-                          <div className="text-sm mt-1 text-gray-600">{event.description}</div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-    );
-  };
-
-  // Render appropriate view
-  const renderCalendarView = () => {
-    switch (activeView) {
-      case "Week":
-        return generateWeekView();
-      case "Day":
-        return generateDayView();
-      case "Agenda":
-        return generateAgendaView();
-      case "Month":
-      default:
-        return generateMonthView();
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-lg shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        {/* Left side with brand and navigation */}
-        <div className="flex items-center space-x-4">
-          <h2 className="text-xl font-bold text-red-500">Calendar</h2>
-          
-          <button onClick={handleToday} className="px-4 py-1 text-sm bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100">
-            Today
-          </button>
-          
-          <div className="flex items-center">
-            <button onClick={handlePrev} className="p-2 rounded-full hover:bg-gray-100">
-              <FaChevronLeft className="text-gray-600" />
-            </button>
-            <button onClick={handleNext} className="p-2 rounded-full hover:bg-gray-100">
-              <FaChevronRight className="text-gray-600" />
-            </button>
-          </div>
-          
-          <h3 className="text-xl font-semibold">
-            {activeView === "Day" 
-              ? currentDate.format("MMMM D, YYYY")
-              : activeView === "Week" 
-                ? `${currentDate.startOf("week").format("MMM D")} - ${currentDate.endOf("week").format("MMM D, YYYY")}`
-                : currentDate.format("MMMM YYYY")
-            }
-          </h3>
-        </div>
-        
-        {/* Right side with view options */}
-        <div className="flex items-center space-x-2">
-          <div className="flex rounded-md border overflow-hidden">
-            {views.map(view => (
-              <button
-                key={view}
-                onClick={() => setActiveView(view)}
-                className={`px-4 py-1 text-sm transition ${
-                  activeView === view
-                    ? "bg-blue-100 text-blue-800 font-medium"
-                    : "bg-white hover:bg-gray-50"
-                }`}
-              >
-                {view}
-              </button>
-            ))}
-          </div>
-          
-          <button 
-            onClick={() => handleOpenModal(currentDate)}
-            className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md"
-          >
-            <FaPlus size={12} />
-            <span>Create</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Calendar view */}
-      <div className="p-1">
-        {renderCalendarView()}
-      </div>
-
-      {/* Event Modal */}
-      {showEventModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">Add Event</h3>
-              <button onClick={handleCloseModal} className="text-gray-500 hover:text-gray-700">
-                &times;
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  value={newEvent.title}
-                  onChange={(e) => setNewEvent({...newEvent, title: e.target.value})}
-                  placeholder="Event title"
-                />
-              </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Date</label>
-                  <input
-                    type="date"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={newEvent.date}
-                    onChange={(e) => setNewEvent({...newEvent, date: e.target.value})}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Time</label>
-                  <input
-                    type="time"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                    value={newEvent.time}
-                    onChange={(e) => setNewEvent({...newEvent, time: e.target.value})}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Duration</label>
-                <select
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  value={newEvent.duration}
-                  onChange={(e) => setNewEvent({...newEvent, duration: e.target.value})}
-                >
-                  <option value="30m">30 minutes</option>
-                  <option value="1h">1 hour</option>
-                  <option value="1h30m">1 hour 30 minutes</option>
-                  <option value="2h">2 hours</option>
-                  <option value="3h">3 hours</option>
-                  <option value="4h">4 hours</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Color</label>
-                <div className="flex space-x-2 mt-1">
-                  {["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#8430CE", "#F06292"].map(color => (
-                    <div 
-                      key={color}
-                      className={`w-8 h-8 rounded-full cursor-pointer ${newEvent.color === color ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
-                      style={{ backgroundColor: color }}
-                      onClick={() => setNewEvent({...newEvent, color})}
-                    ></div>
-                  ))}
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
-                <textarea
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-                  rows="3"
-                  value={newEvent.description}
-                  onChange={(e) => setNewEvent({...newEvent, description: e.target.value})}
-                  placeholder="Add description or notes"
-                ></textarea>
-              </div>
-            </div>
-            
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={handleCloseModal}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateEvent}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                disabled={!newEvent.title.trim()}
-              >
-                Save
-              </button>
+            {/* All-day events at the top */}
+            <div className="absolute top-0 left-0 right-0 z-10">
+              {events
+                .filter(event => event.date === day.format("YYYY-MM-DD") && !event.time)
+                .map((event, idx) => (
+                  <div 
+                    key={idx}
+                    className="text-xs p-1 m-1 rounded truncate bg-opacity-90 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    style={{ 
+                      backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
+                      color: "white",
+                      textDecoration: event.completed ? 'line-through' : 'none',
+                      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEvent(event);
+                      setShowEventPopup(true);
+                    }}
+                  >
+                    {event.title}
+                  </div>
+                ))}
             </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 };
 
-export default Calendar;
+export default WeekView;

@@ -206,55 +206,40 @@ const Calendar = () => {
   };
 
   const renderCalendarView = () => {
-    const currentView = (() => {
-      const viewProps = {
-        currentDate,
-        events,
-        handleOpenModal,
-        toggleEventCompletion,
-        deleteEvent,
-        setSelectedEvent,
-        setShowEventPopup,
-        setTooltip,
-        showConflictDetails,
-        detectEventConflicts
-      };
+    const viewProps = {
+      currentDate,
+      events,
+      handleOpenModal,
+      toggleEventCompletion,
+      deleteEvent,
+      setSelectedEvent,
+      setShowEventPopup,
+      setTooltip,
+      showConflictDetails,
+      detectEventConflicts,
+      // Add these for swipe navigation
+      handlePrev,
+      handleNext
+    };
 
-      switch (activeView) {
-        case "Week":
-          return <WeekView {...viewProps} />;
-        case "Day":
-          return <DayView {...viewProps} />;
-        case "Agenda":
-          return <AgendaView {...viewProps} />;
-        case "Month":
-        default:
-          return <MonthView 
-            {...viewProps} 
-            setDraggedEvent={setDraggedEvent}
-            draggedEvent={draggedEvent}
-            handleDragStart={handleDragStart}
-            handleDragEnd={handleDragEnd}
-            setActiveView={setActiveView} // Add this line
-          />;
-      }
-    })();
-
-    return (
-      <SwitchTransition mode="out-in">
-        <CSSTransition
-          key={activeView}
-          nodeRef={nodeRef}
-          timeout={300}
-          classNames="fade"
-          unmountOnExit
-        >
-          <div ref={nodeRef} className="transition-all duration-300 ease-in-out">
-            {currentView}
-          </div>
-        </CSSTransition>
-      </SwitchTransition>
-    );
+    switch (activeView) {
+      case "Week":
+        return <WeekView {...viewProps} setActiveView={setActiveView} />;
+      case "Day":
+        return <DayView {...viewProps} />;
+      case "Agenda":
+        return <AgendaView {...viewProps} />;
+      case "Month":
+      default:
+        return <MonthView 
+          {...viewProps} 
+          setDraggedEvent={setDraggedEvent}
+          draggedEvent={draggedEvent}
+          handleDragStart={handleDragStart}
+          handleDragEnd={handleDragEnd}
+          setActiveView={setActiveView}
+        />;
+    }
   };
 
   return (

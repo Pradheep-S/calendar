@@ -153,3 +153,36 @@ button:focus-visible {
     min-height: 80px !important;
   }
 }
+
+/* Add these animation classes */
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Make sure touch events work properly */
+.touch-pan-y {
+  touch-action: pan-y;
+}

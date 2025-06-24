@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import { FaCheck, FaTrash } from "react-icons/fa";
 import { getEventTime } from '../utils/dateUtils';
@@ -13,13 +13,103 @@ const DayView = ({
   setShowEventPopup, 
   setTooltip,
   showConflictDetails,
-  detectEventConflicts
+  detectEventConflicts,
+  handlePrev,
+  handleNext
 }) => {
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const todayEvents = events.filter(event => event.date === currentDate.format("YYYY-MM-DD"));
+  const [isMobile, setIsMobile] = useState(false);
   
+  // For swipe navigation
+  const containerRef = useRef(null);
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  
+  // Check if the device is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup event listener
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+  
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+  
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+  
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      handleNext();
+    }
+    if (isRightSwipe) {
+      handlePrev();
+    }
+  };
+
+  // Handle hour cell click differently based on mobile/desktop
+  const handleHourCellClick = (hour) => {
+    if (!isMobile) {
+      // Only open modal on desktop
+      handleOpenModal(currentDate.hour(hour));
+    }
+    // On mobile, we don't open the modal
+  };
+  
+  // Add swipe classes to enable horizontal scrolling
+  useEffect(() => {
+    if (containerRef.current) {
+      const animateTransition = () => {
+        containerRef.current.classList.add('animate-fadeIn');
+        setTimeout(() => {
+          containerRef.current.classList.remove('animate-fadeIn');
+        }, 300);
+      };
+      animateTransition();
+    }
+  }, [currentDate]);
+  
+  // Modify the event handlers to disable tooltips
+  const handleEventMouseEnter = (e, event) => {
+    // Do nothing - tooltip disabled for DayView
+    return;
+  };
+  
+  const handleEventMouseLeave = () => {
+    // Do nothing - tooltip disabled for DayView
+    return;
+  };
+
   return (
-    <div className="overflow-auto max-h-[800px]">
+    <div 
+      className="overflow-auto max-h-[800px] touch-pan-y"
+      ref={containerRef}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       {/* Day header */}
       <div className="py-3 px-4 border-b bg-gray-50">
         <div className="flex items-center">
@@ -98,7 +188,7 @@ const DayView = ({
             <div 
               key={hour} 
               className="h-12 border-b hover:bg-gray-50 relative cursor-pointer" 
-              onClick={() => handleOpenModal(currentDate.hour(hour))}
+              onClick={() => handleHourCellClick(hour)}
             >
               {/* Half-hour guide */}
               <div className="absolute left-0 right-0 top-1/2 border-t border-gray-100"></div>
@@ -188,26 +278,8 @@ const DayView = ({
                       setShowEventPopup(true);
                     }
                   }}
-                  onMouseEnter={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-                    
-                    setTooltip({
-                      visible: true,
-                      event,
-                      position: {
-                        x: rect.left + (rect.width / 2),
-                        y: rect.top + scrollTop
-                      }
-                    });
-                  }}
-                  onMouseLeave={() => {
-                    setTooltip({
-                      visible: false,
-                      event: null,
-                      position: { x: 0, y: 0 }
-                    });
-                  }}
+                  onMouseEnter={handleEventMouseEnter}
+                  onMouseLeave={handleEventMouseLeave}
                 >
                   <div className="p-2 h-full flex flex-col">
                     <div className="font-medium text-xs truncate">{event.title}</div>
