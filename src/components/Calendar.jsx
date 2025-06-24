@@ -32,6 +32,13 @@ const Calendar = () => {
   });
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictInfo, setConflictInfo] = useState(null);
+  const [tooltip, setTooltip] = useState({
+    visible: false,
+    event: null,
+    position: { x: 0, y: 0 }
+  });
+  const [showEventPopup, setShowEventPopup] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   // Configure DnD sensors
   const sensors = useSensors(
@@ -294,6 +301,31 @@ const Calendar = () => {
       border: hasConflicts ? '2px dashed #FBBC05' : 'none'
     };
 
+    // Add these handlers to show/hide tooltips
+    const handleMouseEnter = (e) => {
+      if (isDragging) return;
+      
+      const rect = e.currentTarget.getBoundingClientRect();
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      
+      setTooltip({
+        visible: true,
+        event,
+        position: {
+          x: rect.left + (rect.width / 2),
+          y: rect.top + scrollTop
+        }
+      });
+    };
+
+    const handleMouseLeave = () => {
+      setTooltip({
+        visible: false,
+        event: null,
+        position: { x: 0, y: 0 }
+      });
+    };
+
     return (
       <div 
         ref={setNodeRef}
@@ -309,8 +341,12 @@ const Calendar = () => {
           // Show conflict details if has conflicts
           if (hasConflicts) {
             showConflictDetails(event, conflicts);
+          } else {
+            showEventPopup(event); // Show event popup on click
           }
         }}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <div className={`w-1.5 h-1.5 rounded-full ${event.completed ? 'bg-gray-300' : 'bg-white'} mr-1 flex-shrink-0`}></div>
         <div className="truncate flex items-center">
@@ -468,7 +504,29 @@ const Calendar = () => {
                         e.stopPropagation();
                         if (hasConflicts) {
                           alert(`Warning: This event overlaps with ${conflicts.conflictCount} other event(s)`);
+                        } else {
+                          showEventPopup(event); // Show event popup on click
                         }
+                      }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                        
+                        setTooltip({
+                          visible: true,
+                          event,
+                          position: {
+                            x: rect.left + (rect.width / 2),
+                            y: rect.top + scrollTop
+                          }
+                        });
+                      }}
+                      onMouseLeave={() => {
+                        setTooltip({
+                          visible: false,
+                          event: null,
+                          position: { x: 0, y: 0 }
+                        });
                       }}
                     >
                       <div className="font-medium flex justify-between">
@@ -699,7 +757,27 @@ const Calendar = () => {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      // Here you could add code to open event editing modal
+                      showEventPopup(event); // Show event popup on click
+                    }}
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                      
+                      setTooltip({
+                        visible: true,
+                        event,
+                        position: {
+                          x: rect.left + (rect.width / 2),
+                          y: rect.top + scrollTop
+                        }
+                      });
+                    }}
+                    onMouseLeave={() => {
+                      setTooltip({
+                        visible: false,
+                        event: null,
+                        position: { x: 0, y: 0 }
+                      });
                     }}
                   >
                     <div className="p-2 h-full flex flex-col">
@@ -777,7 +855,29 @@ const Calendar = () => {
                   {eventsByDate[date].map((event, idx) => (
                     <div key={idx} className={`flex items-center p-3 border-b hover:bg-gray-50 group
                       ${event.completed ? 'bg-gray-50' : ''}
-                    `}>
+                    `}
+                    onClick={() => showEventPopup(event)} // Show event popup on click
+                    onMouseEnter={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+                      
+                      setTooltip({
+                        visible: true,
+                        event,
+                        position: {
+                          x: rect.left + 150,
+                          y: rect.top + scrollTop + 20
+                        }
+                      });
+                    }}
+                    onMouseLeave={() => {
+                      setTooltip({
+                        visible: false,
+                        event: null,
+                        position: { x: 0, y: 0 }
+                      });
+                    }}
+                    >
                       <div 
                         className="w-3 h-12 mr-3 rounded-full" 
                         style={{ 
@@ -1164,6 +1264,151 @@ const Calendar = () => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
               >
                 I Understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Tooltip */}
+      {tooltip.visible && tooltip.event && (
+        <div 
+          className="absolute bg-white border border-gray-200 rounded-md shadow-lg p-3 z-50 w-64"
+          style={{ 
+            left: `${tooltip.position.x}px`, 
+            top: `${tooltip.position.y}px`,
+            transform: 'translate(-50%, -100%)',
+            marginTop: '-10px'
+          }}
+        >
+          <div 
+            className="w-full h-1 absolute top-0 left-0 rounded-t-md"
+            style={{ backgroundColor: tooltip.event.color || "#4285F4" }}
+          ></div>
+          <div className="mt-2">
+            <h4 className="font-medium text-sm">{tooltip.event.title}</h4>
+            <div className="text-xs text-gray-600 mt-1 flex items-center">
+              <span className="mr-2">📅 {dayjs(tooltip.event.date).format("MMM D, YYYY")}</span>
+              {tooltip.event.time && (
+                <span>⏰ {getEventTime(tooltip.event)}</span>
+              )}
+            </div>
+            {tooltip.event.description && (
+              <div className="text-xs mt-2 text-gray-700 border-t pt-1">
+                {tooltip.event.description}
+              </div>
+            )}
+            {tooltip.event.completed && (
+              <div className="text-xs mt-1 text-green-600">
+                ✓ Completed
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Event Popup/Modal */}
+      {showEventPopup && selectedEvent && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold flex items-center">
+                <div 
+                  className="w-4 h-4 rounded-full mr-2" 
+                  style={{ backgroundColor: selectedEvent.color || "#4285F4" }}
+                ></div>
+                Event Details
+              </h3>
+              <button onClick={() => setShowEventPopup(false)} className="text-gray-500 hover:text-gray-700">
+                &times;
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="border-b pb-3">
+                <h2 className="text-xl font-semibold">{selectedEvent.title}</h2>
+                <div className="text-sm text-gray-600 mt-1 flex items-center space-x-3">
+                  <span>📅 {dayjs(selectedEvent.date).format("MMMM D, YYYY")}</span>
+                  {selectedEvent.time && (
+                    <span>⏰ {getEventTime(selectedEvent)} ({selectedEvent.duration})</span>
+                  )}
+                </div>
+              </div>
+              
+              {selectedEvent.description && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-1">Description</h4>
+                  <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                </div>
+              )}
+              
+              <div className="flex items-center pt-2">
+                <div 
+                  className={`px-3 py-1 text-xs rounded-full mr-2 ${
+                    selectedEvent.completed 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-blue-100 text-blue-800'
+                  }`}
+                >
+                  {selectedEvent.completed ? '✓ Completed' : '⏳ Pending'}
+                </div>
+                
+                {/* Check for conflicts here properly */}
+                {(() => {
+                  const conflicts = detectEventConflicts(events).find(e => e.id === selectedEvent.id);
+                  const hasConflicts = conflicts && conflicts.conflictCount > 0;
+                  
+                  return hasConflicts ? (
+                    <div 
+                      className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 cursor-pointer"
+                      onClick={() => showConflictDetails(selectedEvent, conflicts)}
+                    >
+                      ⚠️ Time Conflict ({conflicts.conflictCount})
+                    </div>
+                  ) : null;
+                })()}
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-between">
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    toggleEventCompletion(selectedEvent.id);
+                    setSelectedEvent({
+                      ...selectedEvent, 
+                      completed: !selectedEvent.completed
+                    });
+                  }}
+                  className={`px-3 py-1 border rounded-md text-sm flex items-center ${
+                    selectedEvent.completed 
+                      ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                      : 'border-green-300 text-green-600 hover:bg-green-50'
+                  }`}
+                >
+                  <FaCheck className="mr-1" size={12} />
+                  {selectedEvent.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                </button>
+                
+                <button
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this event?')) {
+                      deleteEvent(selectedEvent.id);
+                      setShowEventPopup(false);
+                    }
+                  }}
+                  className="px-3 py-1 border border-red-300 text-red-600 rounded-md text-sm flex items-center hover:bg-red-50"
+                >
+                  <FaTrash className="mr-1" size={12} />
+                  Delete
+                </button>
+              </div>
+              
+              <button
+                onClick={() => setShowEventPopup(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm"
+              >
+                Close
               </button>
             </div>
           </div>
