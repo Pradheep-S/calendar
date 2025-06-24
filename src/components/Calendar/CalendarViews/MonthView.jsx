@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import dayjs from 'dayjs';
 import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
@@ -17,11 +17,11 @@ const DroppableDay = ({ dateStr, children, isToday, isCurrentMonth, onOpenModal,
   return (
     <div 
       ref={setNodeRef}
-      className={`min-h-[100px] p-1 border relative transition-all hover:bg-gray-50 
+      className={`min-h-[80px] p-1 border relative transition-all hover:bg-gray-50 
         ${isToday ? "bg-blue-50 border-blue-300" : ""} 
         ${!isCurrentMonth ? "text-gray-400 bg-gray-50" : ""}
         ${isOver ? "bg-blue-50 border-blue-300" : ""}
-        ${isMobile ? "min-h-[80px]" : ""}`}
+        ${isMobile ? "min-h-[60px]" : ""}`}
       onClick={() => {
         if (isMobile) {
           // In mobile view, directly switch to day view without opening any modal
@@ -59,11 +59,17 @@ const MonthView = ({
   draggedEvent,
   handleDragStart,
   handleDragEnd,
-  setActiveView
+  setActiveView,
+  handlePrev,  // Make sure these props are passed from parent
+  handleNext   // Make sure these props are passed from parent
 }) => {
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState(null);
+  const containerRef = useRef(null);
+  const wheelTimeoutRef = useRef(null);
+  const isScrollingRef = useRef(false);
   
   // Check if the device is mobile based on window width
   useEffect(() => {
@@ -128,115 +134,162 @@ const MonthView = ({
     }
   };
 
+  // Handle wheel events for month navigation
+  const handleWheel = (e) => {
+    // Prevent if we're already processing a scroll
+    if (isScrollingRef.current) return;
+    
+    // Set a threshold to prevent accidental scrolls
+    const scrollThreshold = 50;
+    
+    if (Math.abs(e.deltaY) < scrollThreshold) return;
+    
+    // Set the flag to prevent multiple scroll events
+    isScrollingRef.current = true;
+    
+    if (e.deltaY > 0) {
+      // Scrolling down - go to next month
+      setTransitionDirection('up');
+      handleNext();
+    } else {
+      // Scrolling up - go to previous month
+      setTransitionDirection('down');
+      handlePrev();
+    }
+    
+    // Reset the scrolling flag after a short delay
+    clearTimeout(wheelTimeoutRef.current);
+    wheelTimeoutRef.current = setTimeout(() => {
+      isScrollingRef.current = false;
+    }, 500); // Adjust this timeout as needed
+  };
+  
+  // Reset animation class after view changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTransitionDirection(null);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [currentDate]);
+
   return (
     <>
-      <DndContext 
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={onDragStart}
-        onDragEnd={handleDragEnd}
-        modifiers={[restrictToWindowEdges]}
+      <div 
+        className={`max-h-[calc(100vh-180px)] overflow-hidden month-view-container
+          ${transitionDirection === 'up' ? 'animate-slideUpIn' : ''}
+          ${transitionDirection === 'down' ? 'animate-slideDownIn' : ''}`}
+        ref={containerRef}
+        onWheel={handleWheel}
       >
-        <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
-          <div className="grid grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
-              <div key={day} className="font-medium text-center text-gray-600 text-sm py-3 border-b">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 bg-white">
-            {days.map(date => {
-              const dateStr = date.format("YYYY-MM-DD");
-              const dayEvents = events.filter(e => e.date === dateStr);
-              const isToday = date.isSame(dayjs(), "day");
-              const isCurrentMonth = date.month() === currentDate.month();
-              const styles = getMonthEventStyles(dayEvents);
-
-              return (
-                <DroppableDay 
-                  key={dateStr}
-                  dateStr={dateStr}
-                  isToday={isToday}
-                  isCurrentMonth={isCurrentMonth}
-                  onOpenModal={handleDateClick}
-                  isMobile={isMobile}
-                  dayEvents={dayEvents}
-                  setActiveView={setActiveView}  // Pass setActiveView here
-                  handleOpenModal={handleOpenModal} // Pass handleOpenModal directly
-                >
-                  <div className={`text-sm font-medium text-right p-1 ${isToday ? "text-blue-600" : ""}`}>
-                    {date.date()}
-                  </div>
-                  
-                  {/* On mobile, just show event count */}
-                  {isMobile ? (
-                    dayEvents.length > 0 && (
-                      <div className="text-center">
-                        <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                          {dayEvents.length}
-                        </span>
-                      </div>
-                    )
-                  ) : (
-                    // Desktop view - shows event details
-                    <div className="overflow-y-auto max-h-[85px] space-y-1">
-                      {dayEvents.slice(0, styles.maxToShow).map((event) => (
-                        <DraggableEvent 
-                          key={event.id}
-                          event={event}
-                          events={events}
-                          toggleEventCompletion={toggleEventCompletion}
-                          deleteEvent={deleteEvent}
-                          setSelectedEvent={setSelectedEvent}
-                          setShowEventPopup={setShowEventPopup}
-                          setTooltip={setTooltip}
-                          detectEventConflicts={detectEventConflicts}
-                          showConflictDetails={showConflictDetails}
-                        />
-                      ))}
-                      {styles.hasMore && (
-                        <div 
-                          className="text-xs p-1.5 text-gray-600 cursor-pointer hover:bg-gray-100 rounded-md transition-colors duration-200 text-center font-medium"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDate(date.format("YYYY-MM-DD"));
-                            setShowAllEvents(true);
-                          }}
-                        >
-                          + {styles.moreCount} more
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </DroppableDay>
-              );
-            })}
-          </div>
-        </div>
-
-        <DragOverlay modifiers={[restrictToWindowEdges]}>
-          {draggedEvent ? (
-            <div 
-              className="text-xs p-2 rounded-md truncate flex items-center shadow-xl z-50"
-              style={{ 
-                backgroundColor: draggedEvent.color || "#4285F4",
-                color: "white",
-                width: "150px",
-                opacity: 0.9,
-                boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-                animation: 'pulse 1.5s infinite'
-              }}
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-white mr-1 flex-shrink-0"></div>
-              <div className="truncate">
-                {getEventTime(draggedEvent)} {draggedEvent.title}
-              </div>
+        <DndContext 
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={handleDragEnd}
+          modifiers={[restrictToWindowEdges]}
+        >
+          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+            <div className="grid grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(day => (
+                <div key={day} className="font-medium text-center text-gray-600 text-sm py-3 border-b">
+                  {day}
+                </div>
+              ))}
             </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+
+            <div className="grid grid-cols-7 bg-white">
+              {days.map(date => {
+                const dateStr = date.format("YYYY-MM-DD");
+                const dayEvents = events.filter(e => e.date === dateStr);
+                const isToday = date.isSame(dayjs(), "day");
+                const isCurrentMonth = date.month() === currentDate.month();
+                const styles = getMonthEventStyles(dayEvents);
+
+                return (
+                  <DroppableDay 
+                    key={dateStr}
+                    dateStr={dateStr}
+                    isToday={isToday}
+                    isCurrentMonth={isCurrentMonth}
+                    onOpenModal={handleDateClick}
+                    isMobile={isMobile}
+                    dayEvents={dayEvents}
+                    setActiveView={setActiveView}  // Pass setActiveView here
+                    handleOpenModal={handleOpenModal} // Pass handleOpenModal directly
+                  >
+                    <div className={`text-sm font-medium text-right p-1 ${isToday ? "text-blue-600" : ""}`}>
+                      {date.date()}
+                    </div>
+                    
+                    {/* On mobile, just show event count */}
+                    {isMobile ? (
+                      dayEvents.length > 0 && (
+                        <div className="text-center">
+                          <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                            {dayEvents.length}
+                          </span>
+                        </div>
+                      )
+                    ) : (
+                      // Desktop view - shows event details
+                      <div className="overflow-y-auto max-h-[65px] space-y-1">
+                        {dayEvents.slice(0, styles.maxToShow).map((event) => (
+                          <DraggableEvent 
+                            key={event.id}
+                            event={event}
+                            events={events}
+                            toggleEventCompletion={toggleEventCompletion}
+                            deleteEvent={deleteEvent}
+                            setSelectedEvent={setSelectedEvent}
+                            setShowEventPopup={setShowEventPopup}
+                            setTooltip={setTooltip}
+                            detectEventConflicts={detectEventConflicts}
+                            showConflictDetails={showConflictDetails}
+                          />
+                        ))}
+                        {styles.hasMore && (
+                          <div 
+                            className="text-xs p-1 text-gray-600 cursor-pointer hover:bg-gray-100 rounded-md transition-colors duration-200 text-center font-medium"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedDate(date.format("YYYY-MM-DD"));
+                              setShowAllEvents(true);
+                            }}
+                          >
+                            + {styles.moreCount} more
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </DroppableDay>
+                );
+              })}
+            </div>
+          </div>
+
+          <DragOverlay modifiers={[restrictToWindowEdges]}>
+            {draggedEvent ? (
+              <div 
+                className="text-xs p-2 rounded-md truncate flex items-center shadow-xl z-50"
+                style={{ 
+                  backgroundColor: draggedEvent.color || "#4285F4",
+                  color: "white",
+                  width: "150px",
+                  opacity: 0.9,
+                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+                  animation: 'pulse 1.5s infinite'
+                }}
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-white mr-1 flex-shrink-0"></div>
+                <div className="truncate">
+                  {getEventTime(draggedEvent)} {draggedEvent.title}
+                </div>
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      </div>
 
       {showAllEvents && selectedDate && (
         <ShowAllEventsModal

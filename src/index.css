@@ -213,6 +213,37 @@ button:focus-visible {
   animation: slideUp 0.3s ease-out forwards;
 }
 
+/* Add these animation styles for month transitions */
+@keyframes slideUpIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideDownIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideUpIn {
+  animation: slideUpIn 0.3s ease-out forwards;
+}
+
+.animate-slideDownIn {
+  animation: slideDownIn 0.3s ease-out forwards;
+}
+
 /* Make the date picker more responsive on small screens */
 @media (max-width: 340px) {
   .grid-cols-7 > div {
@@ -320,4 +351,9 @@ body, #root {
 /* Fix for any absolute positioned elements */
 .absolute {
   max-width: 100%;
+}
+
+/* Prevent text selection during wheel scrolling */
+.month-view-container {
+  user-select: none;
 }

@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import dayjs from 'dayjs';
-import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaCalendarAlt, FaTimes, FaHome } from 'react-icons/fa';
 
 const DatePicker = ({ currentDate, onDateChange, isOpen, onClose }) => {
   const [viewMode, setViewMode] = useState('days'); // 'days', 'months', 'years'
   const [viewDate, setViewDate] = useState(currentDate);
   const [decadeStart, setDecadeStart] = useState(Math.floor(currentDate.year() / 10) * 10);
   const [isMobile, setIsMobile] = useState(false);
+  const [animationClass, setAnimationClass] = useState('');
   const pickerRef = useRef(null);
   
   // Check if device is mobile
@@ -26,6 +27,14 @@ const DatePicker = ({ currentDate, onDateChange, isOpen, onClose }) => {
     if (isOpen) {
       setViewDate(currentDate);
       setViewMode('days');
+      setAnimationClass('animate-fadeIn');
+      
+      // Remove animation class after animation completes
+      const timer = setTimeout(() => {
+        setAnimationClass('');
+      }, 300);
+      
+      return () => clearTimeout(timer);
     }
   }, [isOpen, currentDate]);
   
@@ -118,7 +127,7 @@ const DatePicker = ({ currentDate, onDateChange, isOpen, onClose }) => {
     const dayLabels = [];
     for (let i = 0; i < 7; i++) {
       dayLabels.push(
-        <div key={`label-${i}`} className="text-xs font-medium text-gray-400 text-center py-2">
+        <div key={`label-${i}`} className="text-xs font-medium text-gray-500 text-center py-2">
           {isMobile ? dayjs().day(i).format('dd')[0] : dayjs().day(i).format('dd')}
         </div>
       );
@@ -266,147 +275,89 @@ const DatePicker = ({ currentDate, onDateChange, isOpen, onClose }) => {
     if (viewMode === 'days') {
       return (
         <button 
-          className="font-medium hover:bg-gray-100 px-3 py-1 rounded-md transition-colors text-left w-full"
+          className="font-medium hover:bg-gray-100 px-3 py-1 rounded-md transition-colors text-left w-full flex items-center justify-center"
           onClick={handleHeaderClick}
         >
-          {viewDate.format('MMMM YYYY')}
+          <span className="text-lg font-bold">{viewDate.format('MMMM YYYY')}</span>
         </button>
       );
     } else if (viewMode === 'months') {
       return (
         <button 
-          className="font-medium hover:bg-gray-100 px-3 py-1 rounded-md transition-colors text-left w-full"
+          className="font-medium hover:bg-gray-100 px-3 py-1 rounded-md transition-colors text-left w-full flex items-center justify-center"
           onClick={handleHeaderClick}
         >
-          {viewDate.format('YYYY')}
+          <span className="text-lg font-bold">{viewDate.format('YYYY')}</span>
         </button>
       );
     } else if (viewMode === 'years') {
       return (
         <button 
-          className="font-medium hover:bg-gray-100 px-3 py-1 rounded-md transition-colors text-center w-full"
+          className="font-medium hover:bg-gray-100 px-3 py-1 rounded-md transition-colors text-center w-full flex items-center justify-center"
         >
-          {`${decadeStart} - ${decadeStart + 9}`}
+          <span className="text-lg font-bold">{`${decadeStart} - ${decadeStart + 9}`}</span>
         </button>
       );
     }
   };
   
-  // Mobile-optimized or desktop view
-  const mobileView = (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-50 animate-fadeIn">
-      <div 
-        ref={pickerRef}
-        className="absolute bottom-0 left-0 right-0 bg-white rounded-t-xl shadow-xl animate-slideUp max-h-[90vh] overflow-auto"
-      >
-        {/* Drag handle */}
-        <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto my-2"></div>
+  // Shared date picker design
+  const datePickerContent = (
+    <div className={`bg-white rounded-lg shadow-xl p-4 w-full max-w-xs ${animationClass}`}>
+      <div className="flex items-center justify-between mb-2">
+        <button 
+          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600"
+          onClick={handlePrev}
+        >
+          <FaChevronLeft size={16} />
+        </button>
         
-        <div className="px-4 pb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">Select Date</h3>
-            </div>
-            <button 
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-gray-100"
-            >
-              <FaTimes size={16} className="text-gray-500" />
-            </button>
-          </div>
-          
-          <div className="flex items-center justify-between mb-4">
-            <button 
-              className="p-2 rounded-full hover:bg-gray-100"
-              onClick={handlePrev}
-            >
-              <FaChevronLeft size={16} className="text-gray-600" />
-            </button>
-            
-            {renderHeader()}
-            
-            <button 
-              className="p-2 rounded-full hover:bg-gray-100"
-              onClick={handleNext}
-            >
-              <FaChevronRight size={16} className="text-gray-600" />
-            </button>
-          </div>
-          
-          {viewMode === 'days' && renderDaysView()}
-          {viewMode === 'months' && renderMonthsView()}
-          {viewMode === 'years' && renderYearsView()}
-          
-          <div className="mt-6 flex justify-between pt-4 border-t">
-            <button 
-              className="flex items-center px-4 py-2 rounded-lg bg-blue-50 text-blue-600 font-medium"
-              onClick={handleTodayClick}
-            >
-              <FaCalendarAlt className="mr-2" size={14} />
-              Today
-            </button>
-            
-            <button 
-              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
-              onClick={onClose}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-  
-  const desktopView = (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 bg-black bg-opacity-30 animate-fadeIn">
-      <div 
-        ref={pickerRef}
-        className="bg-white rounded-lg shadow-xl p-4 w-full max-w-xs animate-scaleIn"
-      >
-        <div className="flex items-center justify-between mb-2">
-          <button 
-            className="p-1 rounded-full hover:bg-gray-100"
-            onClick={handlePrev}
-          >
-            <FaChevronLeft size={16} className="text-gray-600" />
-          </button>
-          
+        <div className="flex-1 text-center">
           {renderHeader()}
-          
-          <button 
-            className="p-1 rounded-full hover:bg-gray-100"
-            onClick={handleNext}
-          >
-            <FaChevronRight size={16} className="text-gray-600" />
-          </button>
         </div>
         
-        {viewMode === 'days' && renderDaysView()}
-        {viewMode === 'months' && renderMonthsView()}
-        {viewMode === 'years' && renderYearsView()}
+        <button 
+          className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600"
+          onClick={handleNext}
+        >
+          <FaChevronRight size={16} />
+        </button>
+      </div>
+      
+      {viewMode === 'days' && renderDaysView()}
+      {viewMode === 'months' && renderMonthsView()}
+      {viewMode === 'years' && renderYearsView()}
+      
+      <div className="mt-4 flex justify-between items-center pt-3 border-t">
+        <button 
+          className="text-sm bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-md font-medium flex items-center"
+          onClick={handleTodayClick}
+        >
+          <FaHome className="mr-1" size={12} />
+          Today
+        </button>
         
-        <div className="mt-4 flex justify-between items-center pt-3 border-t">
-          <button 
-            className="text-sm text-blue-600 hover:bg-blue-50 px-3 py-1 rounded-md font-medium flex items-center"
-            onClick={handleTodayClick}
-          >
-            <FaCalendarAlt className="mr-1" size={12} />
-            Today
-          </button>
-          
-          <button 
-            className="text-sm text-gray-600 hover:bg-gray-100 px-3 py-1 rounded-md"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-        </div>
+        <button 
+          className="text-sm text-gray-600 hover:bg-gray-100 px-3 py-1.5 rounded-md"
+          onClick={onClose}
+        >
+          Cancel
+        </button>
       </div>
     </div>
   );
   
-  return isMobile ? mobileView : desktopView;
+  // Mobile or desktop view
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30 animate-fadeIn">
+      <div 
+        ref={pickerRef}
+        className={isMobile ? "w-full max-w-[320px] mx-auto mt-24" : ""}
+      >
+        {datePickerContent}
+      </div>
+    </div>
+  );
 };
 
 export default DatePicker;
