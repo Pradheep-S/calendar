@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
@@ -9,7 +9,7 @@ import DraggableEvent from '../EventComponents/DraggableEvent';
 import ShowAllEventsModal from '../Modals/ShowAllEventsModal';
 
 // DroppableDay component
-const DroppableDay = ({ dateStr, children, isToday, isCurrentMonth, onOpenModal }) => {
+const DroppableDay = ({ dateStr, children, isToday, isCurrentMonth, onOpenModal, isMobile, dayEvents, setActiveView, handleOpenModal }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: dateStr
   });
@@ -20,8 +20,21 @@ const DroppableDay = ({ dateStr, children, isToday, isCurrentMonth, onOpenModal 
       className={`min-h-[100px] p-1 border relative transition-all hover:bg-gray-50 
         ${isToday ? "bg-blue-50 border-blue-300" : ""} 
         ${!isCurrentMonth ? "text-gray-400 bg-gray-50" : ""}
-        ${isOver ? "bg-blue-50 border-blue-300" : ""}`}
-      onClick={() => onOpenModal(dayjs(dateStr))}
+        ${isOver ? "bg-blue-50 border-blue-300" : ""}
+        ${isMobile ? "min-h-[80px]" : ""}`}
+      onClick={() => {
+        if (isMobile) {
+          // In mobile view, directly switch to day view without opening any modal
+          setActiveView("Day");
+          // We should also update the current date to the clicked date
+          // This would usually be done in the parent component via props
+          const dateObj = dayjs(dateStr);
+          handleOpenModal(dateObj, true); // Pass true to skip modal
+        } else {
+          // Desktop behavior remains the same
+          onOpenModal(dayjs(dateStr));
+        }
+      }}
     >
       {children}
       {isOver && (
@@ -46,10 +59,27 @@ const MonthView = ({
   draggedEvent,
   handleDragStart,
   handleDragEnd,
-  setActiveView // Add this prop to allow changing the view
+  setActiveView
 }) => {
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if the device is mobile based on window width
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup event listener
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -80,12 +110,21 @@ const MonthView = ({
   // Function to switch to day view
   const handleSwitchToDay = () => {
     if (selectedDate) {
-      // Update the currentDate in the parent component if needed
-      // This would be implemented in the Calendar/index.jsx
-      
       // Switch to day view
       setActiveView("Day");
       setShowAllEvents(false);
+    }
+  };
+
+  // Extended handleOpenModal that can switch to day view
+  const handleDateClick = (date, switchToDay = false, skipModal = false) => {
+    if (switchToDay) {
+      // Update current date and switch to day view
+      handleOpenModal(date, skipModal);
+      setActiveView("Day");
+    } else {
+      // Regular behavior
+      handleOpenModal(date, skipModal);
     }
   };
 
@@ -121,46 +160,62 @@ const MonthView = ({
                   dateStr={dateStr}
                   isToday={isToday}
                   isCurrentMonth={isCurrentMonth}
-                  onOpenModal={handleOpenModal}
+                  onOpenModal={handleDateClick}
+                  isMobile={isMobile}
+                  dayEvents={dayEvents}
+                  setActiveView={setActiveView}  // Pass setActiveView here
+                  handleOpenModal={handleOpenModal} // Pass handleOpenModal directly
                 >
                   <div className={`text-sm font-medium text-right p-1 ${isToday ? "text-blue-600" : ""}`}>
                     {date.date()}
                   </div>
-                  <div className="overflow-y-auto max-h-[85px] space-y-1">
-                    {dayEvents.slice(0, styles.maxToShow).map((event) => (
-                      <DraggableEvent 
-                        key={event.id}
-                        event={event}
-                        events={events}
-                        toggleEventCompletion={toggleEventCompletion}
-                        deleteEvent={deleteEvent}
-                        setSelectedEvent={setSelectedEvent}
-                        setShowEventPopup={setShowEventPopup}
-                        setTooltip={setTooltip}
-                        detectEventConflicts={detectEventConflicts}
-                        showConflictDetails={showConflictDetails}
-                      />
-                    ))}
-                    {styles.hasMore && (
-                      <div 
-                        className="text-xs p-1.5 text-gray-600 cursor-pointer hover:bg-gray-100 rounded-md transition-colors duration-200 text-center font-medium"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Show modal with all events instead of alert
-                          setSelectedDate(date.format("YYYY-MM-DD"));
-                          setShowAllEvents(true);
-                        }}
-                      >
-                        + {styles.moreCount} more
+                  
+                  {/* On mobile, just show event count */}
+                  {isMobile ? (
+                    dayEvents.length > 0 && (
+                      <div className="text-center">
+                        <span className="inline-flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {dayEvents.length}
+                        </span>
                       </div>
-                    )}
-                  </div>
+                    )
+                  ) : (
+                    // Desktop view - shows event details
+                    <div className="overflow-y-auto max-h-[85px] space-y-1">
+                      {dayEvents.slice(0, styles.maxToShow).map((event) => (
+                        <DraggableEvent 
+                          key={event.id}
+                          event={event}
+                          events={events}
+                          toggleEventCompletion={toggleEventCompletion}
+                          deleteEvent={deleteEvent}
+                          setSelectedEvent={setSelectedEvent}
+                          setShowEventPopup={setShowEventPopup}
+                          setTooltip={setTooltip}
+                          detectEventConflicts={detectEventConflicts}
+                          showConflictDetails={showConflictDetails}
+                        />
+                      ))}
+                      {styles.hasMore && (
+                        <div 
+                          className="text-xs p-1.5 text-gray-600 cursor-pointer hover:bg-gray-100 rounded-md transition-colors duration-200 text-center font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDate(date.format("YYYY-MM-DD"));
+                            setShowAllEvents(true);
+                          }}
+                        >
+                          + {styles.moreCount} more
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </DroppableDay>
               );
             })}
           </div>
         </div>
-        
+
         <DragOverlay modifiers={[restrictToWindowEdges]}>
           {draggedEvent ? (
             <div 

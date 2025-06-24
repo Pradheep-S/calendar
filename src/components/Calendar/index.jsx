@@ -101,12 +101,18 @@ const Calendar = () => {
   const handleToday = () => setCurrentDate(dayjs());
 
   // Modal handlers
-  const handleOpenModal = (date) => {
-    setNewEvent({
-      ...newEvent,
-      date: date.format("YYYY-MM-DD")
-    });
-    setShowEventModal(true);
+  const handleOpenModal = (date, skipModal = false) => {
+    // Update the selected date regardless
+    setCurrentDate(date);
+    
+    // Only show the modal if not skipping
+    if (!skipModal) {
+      setNewEvent({
+        ...newEvent,
+        date: date.format("YYYY-MM-DD")
+      });
+      setShowEventModal(true);
+    }
   };
 
   const handleCloseModal = () => {

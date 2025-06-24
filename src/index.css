@@ -147,4 +147,9 @@ button:focus-visible {
   .grid-cols-8 {
     min-width: 800px;
   }
+  
+  /* Month view cell adjustments */
+  .min-h-\[100px\] {
+    min-height: 80px !important;
+  }
 }
