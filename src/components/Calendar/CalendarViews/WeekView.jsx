@@ -102,7 +102,7 @@ const WeekView = ({
   return (
     <div className="overflow-auto max-h-[800px]">
       {/* Week header with days */}
-      <div className="grid grid-cols-8 border-b">
+      <div className="grid grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] border-b">
         <div className="p-2 border-r"></div>
         {weekDays.map(day => {
           const isToday = day.isSame(dayjs(), "day");
@@ -113,7 +113,7 @@ const WeekView = ({
               onClick={() => handleDayClick(day)}
             >
               <div className="font-medium">{isMobile ? day.format("ddd").charAt(0) : day.format("ddd")}</div>
-              <div className={`text-xl ${isToday ? "bg-blue-600 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto" : ""}`}>
+              <div className={`text-sm ${isToday ? "bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center mx-auto" : ""}`}>
                 {day.date()}
               </div>
             </div>
@@ -121,12 +121,14 @@ const WeekView = ({
         })}
       </div>
 
-      <div className="grid grid-cols-8">
+      <div className="grid grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]">
         {/* Time column */}
         <div className="border-r">
           {hours.map(hour => (
-            <div key={hour} className="h-12 border-b text-xs text-right pr-2 -mt-3 text-gray-500">
-              {hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}
+            <div key={hour} className="h-12 border-b flex items-center justify-end">
+              <div className="text-xs text-gray-500 pr-2">
+                {hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}
+              </div>
             </div>
           ))}
         </div>

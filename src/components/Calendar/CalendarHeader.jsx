@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FaChevronLeft, FaChevronRight, FaPlus, FaBars, FaCalendarDay } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaPlus, FaBars, FaCalendarDay, FaCalendarAlt } from "react-icons/fa";
 import MobileNavDrawer from './MobileNavDrawer';
+import DatePicker from './DatePicker';
 
 const CalendarHeader = ({
   currentDate,
@@ -13,30 +14,50 @@ const CalendarHeader = ({
   handleOpenModal
 }) => {
   const [showMobileNav, setShowMobileNav] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const toggleMobileNav = () => {
     setShowMobileNav(!showMobileNav);
   };
 
+  const toggleDatePicker = () => {
+    setShowDatePicker(!showDatePicker);
+  };
+
   const handleSwitchToToday = () => {
     handleToday();
-    // If not already in day view, switch to it
-    if (activeView !== "Day") {
-      setActiveView("Day");
-    }
+    // Always switch to Day view when clicking Today button, both on mobile and desktop
+    setActiveView("Day");
+  };
+
+  const handleDateChange = (newDate) => {
+    // Handle date change and maintain current view
+    handleOpenModal(newDate, true);
   };
 
   // Renders month name prominently for mobile
   const renderHeaderTitle = () => {
+    let title;
+    
     if (activeView === "Month") {
-      return currentDate.format("MMMM YYYY");
+      title = currentDate.format("MMMM YYYY");
     } else if (activeView === "Week") {
-      return `${currentDate.startOf("week").format("MMM D")} - ${currentDate.endOf("week").format("MMM D")}`;
+      title = `${currentDate.startOf("week").format("MMM D")} - ${currentDate.endOf("week").format("MMM D, YYYY")}`;
     } else if (activeView === "Day") {
-      return currentDate.format("MMMM D, YYYY");
+      title = currentDate.format("MMMM D, YYYY");
     } else {
-      return "Upcoming Events";
+      title = "Upcoming Events";
     }
+    
+    return (
+      <button 
+        onClick={toggleDatePicker}
+        className="flex items-center text-gray-800 hover:bg-gray-100 rounded-lg px-3 py-1.5 transition-colors"
+      >
+        <span className="font-bold text-xl sm:text-2xl">{title}</span>
+        <FaCalendarAlt className="ml-2 text-gray-500" size={16} />
+      </button>
+    );
   };
 
   return (
@@ -54,12 +75,14 @@ const CalendarHeader = ({
           </button>
         </div>
 
-        {/* Display month/date instead of "Calendar" */}
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{renderHeaderTitle()}</h2>
+        {/* Display month/date with date picker */}
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
+          {renderHeaderTitle()}
+        </h2>
         
         <div className="flex items-center sm:ml-6 space-x-2">
           <button 
-            onClick={handleToday} 
+            onClick={handleSwitchToToday} // Changed from handleToday to handleSwitchToToday
             className="px-3 py-1 text-xs sm:text-sm bg-white text-blue-700 rounded-md shadow-sm hover:shadow transition-all duration-200 border border-blue-100 hover:bg-blue-50 hidden sm:block"
           >
             Today
@@ -133,6 +156,14 @@ const CalendarHeader = ({
           handleToday={handleToday}
         />
       )}
+      
+      {/* Date Picker Component */}
+      <DatePicker
+        currentDate={currentDate}
+        onDateChange={handleDateChange}
+        isOpen={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+      />
     </div>
   );
 };

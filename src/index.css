@@ -120,11 +120,27 @@ button:focus-visible {
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: fadeIn 0.2s ease-out forwards;
 }
 
 .animate-scaleIn {
-  animation: scaleIn 0.3s ease-out forwards;
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Specific animation for date picker sliding in */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.2s ease-out forwards;
 }
 
 /* Add to src/index.css */
@@ -182,7 +198,126 @@ button:focus-visible {
   }
 }
 
+/* Add these animation styles to your existing CSS */
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Make the date picker more responsive on small screens */
+@media (max-width: 340px) {
+  .grid-cols-7 > div {
+    width: 6px !important;
+    height: 6px !important;
+  }
+}
+
+/* Improve touch targets on mobile */
+@media (max-width: 640px) {
+  .datepicker-day {
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
 /* Make sure touch events work properly */
 .touch-pan-y {
   touch-action: pan-y;
+}
+
+/* Add these fixes to prevent horizontal scrolling on mobile */
+
+/* General container fix */
+body, #root {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
+
+/* Mobile specific fixes */
+@media (max-width: 768px) {
+  /* Week view adjustments */
+  .grid-cols-8 {
+    min-width: auto;
+    width: 100%;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  
+  /* Month view cell adjustments */
+  .min-h-\[100px\] {
+    min-height: 80px !important;
+  }
+
+  /* Make sure all containers respect viewport width */
+  .overflow-auto {
+    max-width: 100%;
+  }
+
+  /* Fix width issues in calendar container */
+  [class*="rounded-xl"],
+  [class*="shadow-xl"],
+  [class*="overflow-hidden"] {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* Fix padding in mobile view */
+  #root {
+    padding: 0.5rem;
+  }
+
+  /* Improve DayView layout */
+  .grid-cols-\[80px_1fr\] {
+    grid-template-columns: 60px 1fr;
+  }
+
+  /* Fix for date picker position */
+  .fixed.inset-0.z-50 {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 375px) {
+  /* Further reduce left column width */
+  .grid-cols-\[80px_1fr\] {
+    grid-template-columns: 50px 1fr;
+  }
+
+  /* Reduce paddings */
+  .p-3, .p-4, .p-5, .p-6 {
+    padding: 0.5rem !important;
+  }
+
+  .px-3, .px-4, .px-5, .px-6 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Ensure all text wraps properly */
+  * {
+    word-break: break-word;
+    hyphens: auto;
+  }
+}
+
+/* Ensure all views stay within container */
+.overflow-auto.max-h-\[800px\] {
+  max-width: 100%;
+}
+
+/* Fix for any absolute positioned elements */
+.absolute {
+  max-width: 100%;
 }
