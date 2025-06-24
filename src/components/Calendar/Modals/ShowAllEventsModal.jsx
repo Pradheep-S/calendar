@@ -35,7 +35,7 @@ const ShowAllEventsModal = ({
           </h3>
           <div className="flex items-center">
             <button 
-              onClick={switchToDay}
+              onClick={() => switchToDay(dayjs(date))}
               className="text-xs mr-3 bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded flex items-center"
               title="Switch to Day view"
             >

@@ -160,11 +160,11 @@ const DayView = ({
 
       {/* Time grid */}
       <div className="grid grid-cols-[80px_1fr]">
-        {/* Time column */}
+        {/* Time column - IMPROVED ALIGNMENT */}
         <div className="border-r">
           {hours.map(hour => (
-            <div key={hour} className="h-12 border-b text-xs text-right pr-2 -mt-3 text-gray-500">
-              {hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}
+            <div key={hour} className="h-12 border-b flex items-start justify-end pr-2 pt-0.5 text-gray-500">
+              <div className="text-xs">{hour === 0 ? "" : `${hour % 12 || 12} ${hour < 12 ? "am" : "pm"}`}</div>
             </div>
           ))}
         </div>

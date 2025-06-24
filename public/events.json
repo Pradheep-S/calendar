@@ -1,72 +1,278 @@
 [
   {
     "id": 1,
-    "title": "Team Meeting",
-    "date": "2025-06-23",
+    "title": "Project Group Meeting",
+    "date": "2025-06-26",
     "time": "10:00",
     "duration": "1h",
-    "description": "Weekly team sync",
+    "description": "Machine Learning project discussion with team at Central Library",
     "color": "#4285F4",
     "completed": false
   },
   {
     "id": 2,
-    "title": "Lunch with Alex",
-    "date": "2025-06-23",
-    "time": "12:30",
-    "duration": "1h30m",
-    "description": "Meet at Cafe Central",
-    "color": "#34A853",
-    "completed": true
-  },
-  {
-    "id": 3,
-    "title": "Product Review",
-    "date": "2025-06-24",
-    "time": "14:00",
+    "title": "Semester Fee Payment",
+    "date": "2025-06-28",
+    "time": "14:30",
     "duration": "1h",
-    "description": "Q2 roadmap discussion",
+    "description": "Last date for payment at the admin block",
     "color": "#EA4335",
     "completed": false
   },
   {
-    "id": 4,
-    "title": "Dentist Appointment",
-    "date": "2025-06-25",
-    "time": "09:15",
-    "duration": "1h",
-    "description": "Annual checkup",
+    "id": 3,
+    "title": "Pongal Cultural Event",
+    "date": "2025-06-30",
+    "time": "18:00",
+    "duration": "3h",
+    "description": "Annual college cultural program at open air theater",
     "color": "#FBBC05",
     "completed": false
   },
   {
+    "id": 4,
+    "title": "Assignment Submission",
+    "date": "2025-06-29",
+    "time": "09:00",
+    "duration": "2h",
+    "description": "Submit Data Structures assignment to Prof. Rajesh",
+    "color": "#34A853",
+    "completed": false
+  },
+  {
     "id": 5,
-    "title": "Birthday Party",
+    "title": "Morning Cricket Practice",
     "date": "2025-06-27",
-    "time": "18:00",
+    "time": "07:00",
+    "duration": "1h30m",
+    "description": "College team practice at main ground",
+    "color": "#8430CE",
+    "completed": true
+  },
+  {
+    "id": 6, 
+    "title": "Coffee with Karthik",
+    "date": "2025-06-25",
+    "time": "15:00",
+    "duration": "1h",
+    "description": "Meet at Saravana Bhavan near college",
+    "color": "#F06292",
+    "completed": false
+  },
+  {
+    "id": 7,
+    "title": "Vijay Movie at Sathyam",
+    "date": "2025-06-28",
+    "time": "20:00",
+    "duration": "2h30m",
+    "description": "New Vijay movie with hostel friends",
+    "color": "#4285F4",
+    "completed": false
+  },
+  {
+    "id": 8,
+    "title": "Bus to Chennai",
+    "date": "2025-07-02",
+    "time": "08:45",
     "duration": "3h",
-    "description": "Sarah's birthday celebration at Downtown Grill",
+    "description": "SETC bus from Madurai to Chennai",
+    "color": "#EA4335",
+    "completed": false
+  },
+  {
+    "id": 9,
+    "title": "Internship Interview",
+    "date": "2025-07-05",
+    "time": "13:00",
+    "duration": "2h",
+    "description": "Virtual interview with TCS for summer internship",
+    "color": "#34A853",
+    "completed": false
+  },
+  {
+    "id": 10,
+    "title": "NSS Meeting",
+    "date": "2025-06-26",
+    "time": "16:00",
+    "duration": "1h",
+    "description": "Planning for upcoming village service camp",
+    "color": "#4285F4",
+    "completed": false
+  },
+  {
+    "id": 11,
+    "title": "Hostel Mess Committee",
+    "date": "2025-07-10",
+    "time": "19:30",
+    "duration": "2h",
+    "description": "Monthly menu planning meeting",
+    "color": "#F06292",
+    "completed": false
+  },
+  {
+    "id": 12,
+    "title": "College Health Checkup",
+    "date": "2025-07-15",
+    "time": "11:00",
+    "duration": "1h",
+    "description": "Annual health camp at college dispensary",
+    "color": "#EA4335",
+    "completed": false
+  },
+  {
+    "id": 13,
+    "title": "Techfest Planning",
+    "date": "2025-07-18",
+    "time": "14:00",
+    "duration": "4h",
+    "description": "Organizing committee meeting for annual tech fest",
+    "color": "#FBBC05",
+    "completed": false
+  },
+  {
+    "id": 14,
+    "title": "Mini Project Kickoff",
+    "date": "2025-07-08",
+    "time": "09:30",
+    "duration": "2h",
+    "description": "IoT project initialization with team members",
+    "color": "#34A853",
+    "completed": false
+  },
+  {
+    "id": 15,
+    "title": "Dept. Website Update",
+    "date": "2025-06-27",
+    "time": "22:00",
+    "duration": "1h",
+    "description": "Update CSE department website with new events",
     "color": "#8430CE",
     "completed": false
   },
   {
-    "id": 6,
-    "title": "Gym Session",
-    "date": "2025-06-23",
-    "time": "17:30",
-    "duration": "1h",
-    "description": "Upper body workout",
-    "color": "#F06292",
-    "completed": true
+    "id": 16,
+    "title": "Beach Cleanup Drive",
+    "date": "2025-07-20",
+    "time": "10:00",
+    "duration": "3h",
+    "description": "Marina Beach cleanup with ECO club",
+    "color": "#4285F4",
+    "completed": false
   },
   {
-    "id": 7,
-    "title": "Project Deadline",
-    "date": "2025-06-30",
-    "time": "17:00",
-    "duration": "30m",
-    "description": "Submit final reports",
+    "id": 17,
+    "title": "Scholarship Application",
+    "date": "2025-06-27",
+    "time": "11:30",
+    "duration": "1h30m",
+    "description": "Last date to apply for Tamil Nadu state scholarship",
+    "color": "#34A853",
+    "completed": false
+  },
+  {
+    "id": 18,
+    "title": "College Sports Day",
+    "date": "2025-07-12",
+    "description": "Annual sports competition at college stadium",
+    "color": "#4285F4",
+    "completed": false
+  },
+  {
+    "id": 19,
+    "title": "Hostel Cultural Night",
+    "date": "2025-07-04",
+    "time": "18:00",
+    "duration": "4h",
+    "description": "Performances, music and dance by hostel students",
+    "color": "#FBBC05",
+    "completed": false
+  },
+  {
+    "id": 20,
+    "title": "Python Workshop",
+    "date": "2025-07-22",
+    "time": "15:00",
+    "duration": "2h",
+    "description": "Advanced Python learning session by IEEE student chapter",
+    "color": "#8430CE",
+    "completed": false
+  },
+  {
+    "id": 21,
+    "title": "Lab Internal Exam",
+    "date": "2025-06-27",
+    "time": "14:00",
+    "duration": "3h",
+    "description": "Computer Networks lab assessment",
     "color": "#EA4335",
+    "completed": false
+  },
+  {
+    "id": 22,
+    "title": "Tamil Mandram Meeting",
+    "date": "2025-07-06",
+    "time": "16:30",
+    "duration": "1h30m",
+    "description": "Tamil literature discussion and poem recitation",
+    "color": "#F06292",
+    "completed": false
+  },
+  {
+    "id": 23,
+    "title": "Placement Training",
+    "date": "2025-07-14",
+    "time": "09:00",
+    "duration": "6h",
+    "description": "Mock interviews and aptitude test preparation",
+    "color": "#34A853",
+    "completed": false
+  },
+  {
+    "id": 24,
+    "title": "Temple Visit",
+    "date": "2025-07-01",
+    "time": "07:00",
+    "duration": "2h",
+    "description": "Visit to Meenakshi Temple before exams",
+    "color": "#FBBC05",
+    "completed": false
+  },
+  {
+    "id": 25,
+    "title": "Industrial Visit",
+    "date": "2025-07-25",
+    "description": "Department trip to ISRO Mahendragiri",
+    "color": "#4285F4",
+    "completed": false
+  },
+  {
+    "id": 26,
+    "title": "Library Book Return",
+    "date": "2025-06-27",
+    "time": "16:30",
+    "duration": "30m",
+    "description": "Return borrowed books before late fee applies",
+    "color": "#F06292",
+    "completed": false
+  },
+  {
+    "id": 27,
+    "title": "Robotics Club Demo",
+    "date": "2025-06-27",
+    "time": "18:00",
+    "duration": "1h30m",
+    "description": "Demonstration of new robot project in ECE lab",
+    "color": "#4285F4",
+    "completed": false
+  },
+  {
+    "id": 28,
+    "title": "Hostel Room Inspection",
+    "date": "2025-06-27",
+    "time": "10:00",
+    "duration": "30m",
+    "description": "Monthly cleanliness and maintenance check by warden",
+    "color": "#FBBC05",
     "completed": false
   }
 ]

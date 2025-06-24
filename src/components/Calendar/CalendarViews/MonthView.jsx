@@ -60,8 +60,8 @@ const MonthView = ({
   handleDragStart,
   handleDragEnd,
   setActiveView,
-  handlePrev,  // Make sure these props are passed from parent
-  handleNext   // Make sure these props are passed from parent
+  handlePrev,
+  handleNext
 }) => {
   const [showAllEvents, setShowAllEvents] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -70,6 +70,7 @@ const MonthView = ({
   const containerRef = useRef(null);
   const wheelTimeoutRef = useRef(null);
   const isScrollingRef = useRef(false);
+  const dayScrollingRef = useRef(false);
   
   // Check if the device is mobile based on window width
   useEffect(() => {
@@ -114,9 +115,10 @@ const MonthView = ({
   }
   
   // Function to switch to day view
-  const handleSwitchToDay = () => {
-    if (selectedDate) {
-      // Switch to day view
+  const handleSwitchToDay = (dateObj) => {
+    if (dateObj) {
+      // Switch to day view with the selected date
+      handleOpenModal(dateObj, true); // Pass true to skip modal
       setActiveView("Day");
       setShowAllEvents(false);
     }
@@ -134,9 +136,14 @@ const MonthView = ({
     }
   };
 
-  // Handle wheel events for month navigation
+  // Handle wheel events for month navigation, but only if not scrolling within a day cell
   const handleWheel = (e) => {
-    // Prevent if we're already processing a scroll
+    // Skip wheel handling if we're scrolling within a day cell with events
+    if (dayScrollingRef.current) {
+      return;
+    }
+    
+    // Prevent if we're already processing a month navigation scroll
     if (isScrollingRef.current) return;
     
     // Set a threshold to prevent accidental scrolls
@@ -162,6 +169,23 @@ const MonthView = ({
     wheelTimeoutRef.current = setTimeout(() => {
       isScrollingRef.current = false;
     }, 500); // Adjust this timeout as needed
+  };
+  
+  // Handle scrolling within a day cell
+  const handleDayCellScroll = (e) => {
+    // Prevent event bubbling to stop triggering month navigation
+    e.stopPropagation();
+    
+    // Set the flag to indicate we're scrolling within a day cell
+    dayScrollingRef.current = true;
+    
+    // Clear any existing timeout
+    clearTimeout(wheelTimeoutRef.current);
+    
+    // Reset the flag after a delay to allow normal scrolling to resume
+    wheelTimeoutRef.current = setTimeout(() => {
+      dayScrollingRef.current = false;
+    }, 300);
   };
   
   // Reset animation class after view changes
@@ -215,8 +239,8 @@ const MonthView = ({
                     onOpenModal={handleDateClick}
                     isMobile={isMobile}
                     dayEvents={dayEvents}
-                    setActiveView={setActiveView}  // Pass setActiveView here
-                    handleOpenModal={handleOpenModal} // Pass handleOpenModal directly
+                    setActiveView={setActiveView}
+                    handleOpenModal={handleOpenModal}
                   >
                     <div className={`text-sm font-medium text-right p-1 ${isToday ? "text-blue-600" : ""}`}>
                       {date.date()}
@@ -232,9 +256,12 @@ const MonthView = ({
                         </div>
                       )
                     ) : (
-                      // Desktop view - shows event details
-                      <div className="overflow-y-auto max-h-[65px] space-y-1">
-                        {dayEvents.slice(0, styles.maxToShow).map((event) => (
+                      // Desktop view - shows event details with scrollable container
+                      <div 
+                        className="overflow-y-auto max-h-[65px] space-y-1 day-events-container"
+                        onWheel={handleDayCellScroll}
+                      >
+                        {dayEvents.map((event) => (
                           <DraggableEvent 
                             key={event.id}
                             event={event}
@@ -248,7 +275,7 @@ const MonthView = ({
                             showConflictDetails={showConflictDetails}
                           />
                         ))}
-                        {styles.hasMore && (
+                        {dayEvents.length > 3 && (
                           <div 
                             className="text-xs p-1 text-gray-600 cursor-pointer hover:bg-gray-100 rounded-md transition-colors duration-200 text-center font-medium"
                             onClick={(e) => {
@@ -257,7 +284,7 @@ const MonthView = ({
                               setShowAllEvents(true);
                             }}
                           >
-                            + {styles.moreCount} more
+                            Show all ({dayEvents.length})
                           </div>
                         )}
                       </div>
