@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-import { FaChevronLeft, FaChevronRight, FaPlus, FaCheck, FaTrash } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaPlus, FaCheck, FaTrash, FaEdit } from "react-icons/fa";
 import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -42,6 +42,8 @@ const Calendar = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [activeId, setActiveId] = useState(null);
   const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [isEditing, setIsEditing] = useState(false); // Editing state
+  const [editedEvent, setEditedEvent] = useState(null); // Edited event state
 
   // Configure DnD sensors
   const sensors = useSensors(
@@ -355,7 +357,9 @@ const Calendar = () => {
           if (hasConflicts) {
             showConflictDetails(event, conflicts);
           } else {
-            showEventPopup(event); // Show event popup on click
+            // Show the event popup on click
+            setSelectedEvent(event);
+            setShowEventPopup(true);
           }
         }}
         onMouseEnter={handleMouseEnter}
@@ -594,9 +598,7 @@ const Calendar = () => {
                         e.stopPropagation();
                         if (hasConflicts) {
                           alert(`Warning: This event overlaps with ${conflicts.conflictCount} other event(s)`);
-                        } else {
-                          showEventPopup(event); // Show event popup on click
-                        }
+                        } 
                       }}
                       onMouseEnter={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
@@ -847,11 +849,7 @@ const Calendar = () => {
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (hasConflicts) {
-                        alert(`Warning: This event overlaps with ${conflicts.conflictCount} other event(s)`);
-                      } else {
-                        showEventPopup(event); // Show event popup on click
-                      }
+                      
                     }}
                     onMouseEnter={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
@@ -916,8 +914,149 @@ const Calendar = () => {
     );
   };
 
-  // Update your renderCalendarView function with transitions
+  const generateAgendaView = () => {
+    // Get events for the next 14 days
+    const startDate = currentDate.startOf('day');
+    const endDate = startDate.add(14, 'day');
+    
+    // Filter and sort events for the date range
+    const agendaEvents = events
+      .filter(event => {
+        const eventDate = dayjs(event.date);
+        return eventDate.isAfter(startDate) || eventDate.isSame(startDate, 'day');
+      })
+      .sort((a, b) => {
+        // Sort by date first
+        const dateA = dayjs(a.date);
+        const dateB = dayjs(b.date);
+        if (!dateA.isSame(dateB, 'day')) {
+          return dateA.diff(dateB);
+        }
+        
+        // If same date, sort by time
+        if (!a.time && b.time) return -1; // All-day events first
+        if (a.time && !b.time) return 1;
+        if (!a.time && !b.time) return 0;
+        
+        // Both have times, compare them
+        const [hoursA, minutesA] = a.time.split(':').map(Number);
+        const [hoursB, minutesB] = b.time.split(':').map(Number);
+        return (hoursA * 60 + minutesA) - (hoursB * 60 + minutesB);
+      });
+    
+    // Group events by date
+    const eventsByDate = {};
+    agendaEvents.forEach(event => {
+      if (!eventsByDate[event.date]) {
+        eventsByDate[event.date] = [];
+      }
+      eventsByDate[event.date].push(event);
+    });
+    
+    return (
+      <div className="overflow-auto max-h-[800px]">
+        <div className="p-4 border-b bg-gray-50">
+          <h3 className="text-xl font-semibold">Upcoming Events</h3>
+          <p className="text-sm text-gray-600">Next 14 days</p>
+        </div>
+        
+        {Object.keys(eventsByDate).length > 0 ? (
+          Object.keys(eventsByDate).sort().map(date => {
+            const dayEvents = eventsByDate[date];
+            const dateObj = dayjs(date);
+            const isToday = dateObj.isSame(dayjs(), 'day');
+            
+            return (
+              <div key={date} className="border-b">
+                <div className={`py-2 px-4 ${isToday ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                  <div className="flex items-center">
+                    <div className={`flex flex-col items-center justify-center rounded-full 
+                      ${isToday ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'} 
+                      w-10 h-10 mr-3`}>
+                      <span className="text-sm font-medium">{dateObj.format("D")}</span>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-medium">{dateObj.format("dddd")}</h4>
+                      <p className="text-sm text-gray-600">{dateObj.format("MMMM D, YYYY")}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="divide-y">
+                  {dayEvents.map((event, idx) => (
+                    <div 
+                      key={idx} 
+                      className="p-3 hover:bg-gray-50 cursor-pointer flex items-start"
+                      onClick={() => {
+                        setSelectedEvent(event);
+                        setShowEventPopup(true);
+                      }}
+                    >
+                      <div 
+                        className="w-4 h-4 rounded-full mt-1 mr-3 flex-shrink-0" 
+                        style={{ backgroundColor: event.color || "#4285F4" }}
+                      ></div>
+                      <div className="flex-grow">
+                        <div className={`font-medium ${event.completed ? 'line-through text-gray-500' : ''}`}>
+                          {event.title}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {event.time ? getEventTime(event) : 'All day'} 
+                          {event.duration && event.time ? ` • ${event.duration}` : ''}
+                        </div>
+                        {event.description && (
+                          <div className="text-sm text-gray-600 mt-1 line-clamp-2">{event.description}</div>
+                        )}
+                      </div>
+                      
+                      <div className="flex space-x-2 opacity-0 hover:opacity-100 transition-opacity">
+                        <button 
+                          className={`p-1.5 rounded-full ${event.completed ? 'text-green-600 bg-green-50' : 'text-gray-400 hover:text-green-600 hover:bg-green-50'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleEventCompletion(event.id);
+                          }}
+                          title={event.completed ? "Mark as not completed" : "Mark as completed"}
+                        >
+                          <FaCheck size={12} />
+                        </button>
+                        <button 
+                          className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this event?')) {
+                              deleteEvent(event.id);
+                            }
+                          }}
+                          title="Delete event"
+                        >
+                          <FaTrash size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="p-8 text-center text-gray-500">
+            <p className="text-lg">No upcoming events</p>
+            <p className="text-sm mt-2">Click the "Create" button to add a new event</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Move the ref outside of renderCalendarView to the top level of your component
+  const nodeRef = React.useRef(null);
+
+  // Update your renderCalendarView function to use nodeRef instead of relying on findDOMNode
   const renderCalendarView = () => {
+    // Remove this line:
+    // const nodeRef = React.useRef(null);
+    
     const currentView = (() => {
       switch (activeView) {
         case "Week":
@@ -936,11 +1075,12 @@ const Calendar = () => {
       <SwitchTransition mode="out-in">
         <CSSTransition
           key={activeView}
+          nodeRef={nodeRef}
           timeout={300}
           classNames="fade"
           unmountOnExit
         >
-          <div className="transition-all duration-300 ease-in-out">
+          <div ref={nodeRef} className="transition-all duration-300 ease-in-out">
             {currentView}
           </div>
         </CSSTransition>
@@ -1271,100 +1411,251 @@ const Calendar = () => {
 
       {/* Event Popup/Modal */}
       {showEventPopup && selectedEvent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
+          onClick={(e) => {
+            // Close popup when clicking outside
+            if (e.target === e.currentTarget) {
+              setShowEventPopup(false);
+              setIsEditing(false);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-semibold flex items-center">
                 <div 
                   className="w-4 h-4 rounded-full mr-2" 
                   style={{ backgroundColor: selectedEvent.color || "#4285F4" }}
                 ></div>
-                Event Details
+                {isEditing ? "Edit Event" : "Event Details"}
               </h3>
-              <button onClick={() => setShowEventPopup(false)} className="text-gray-500 hover:text-gray-700">
+              <button onClick={() => {
+                setShowEventPopup(false);
+                setIsEditing(false);
+              }} className="text-gray-500 hover:text-gray-700">
                 &times;
               </button>
             </div>
             
-            <div className="space-y-4">
-              <div className="border-b pb-3">
-                <h2 className="text-xl font-semibold">{selectedEvent.title}</h2>
-                <div className="text-sm text-gray-600 mt-1 flex items-center space-x-3">
-                  <span>📅 {dayjs(selectedEvent.date).format("MMMM D, YYYY")}</span>
-                  {selectedEvent.time && (
-                    <span>⏰ {getEventTime(selectedEvent)} ({selectedEvent.duration})</span>
-                  )}
+            {!isEditing ? (
+              // View mode
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <h2 className="text-xl font-semibold">{selectedEvent.title}</h2>
+                  <div className="text-sm text-gray-600 mt-1 flex items-center space-x-3">
+                    <span>📅 {dayjs(selectedEvent.date).format("MMMM D, YYYY")}</span>
+                    {selectedEvent.time && (
+                      <span>⏰ {getEventTime(selectedEvent)} ({selectedEvent.duration})</span>
+                    )}
+                  </div>
+                </div>
+                
+                {selectedEvent.description && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">Description</h4>
+                    <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                  </div>
+                )}
+                
+                <div className="flex items-center pt-2">
+                  <div 
+                    className={`px-3 py-1 text-xs rounded-full mr-2 ${
+                      selectedEvent.completed 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    {selectedEvent.completed ? '✓ Completed' : '⏳ Pending'}
+                  </div>
+                  
+                  {/* Check for conflicts */}
+                  {(() => {
+                    const conflicts = detectEventConflicts(events).find(e => e.id === selectedEvent.id);
+                    const hasConflicts = conflicts && conflicts.conflictCount > 0;
+                    
+                    return hasConflicts ? (
+                      <div 
+                        className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 cursor-pointer"
+                        onClick={() => showConflictDetails(selectedEvent, conflicts)}
+                      >
+                        ⚠️ Time Conflict ({conflicts.conflictCount})
+                      </div>
+                    ) : null;
+                  })()}
                 </div>
               </div>
-              
-              {selectedEvent.description && (
+            ) : (
+              // Edit mode
+              <div className="space-y-4">
                 <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-1">Description</h4>
-                  <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                  <label className="block text-sm font-medium text-gray-700">Title</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    value={editedEvent.title}
+                    onChange={(e) => setEditedEvent({...editedEvent, title: e.target.value})}
+                    placeholder="Event title"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Date</label>
+                    <input
+                      type="date"
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      value={editedEvent.date}
+                      onChange={(e) => setEditedEvent({...editedEvent, date: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Time</label>
+                    <input
+                      type="time"
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                      value={editedEvent.time}
+                      onChange={(e) => setEditedEvent({...editedEvent, time: e.target.value})}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Duration</label>
+                  <select
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    value={editedEvent.duration}
+                    onChange={(e) => setEditedEvent({...editedEvent, duration: e.target.value})}
+                  >
+                    <option value="30m">30 minutes</option>
+                    <option value="1h">1 hour</option>
+                    <option value="1h30m">1 hour 30 minutes</option>
+                    <option value="2h">2 hours</option>
+                    <option value="3h">3 hours</option>
+                    <option value="4h">4 hours</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Color</label>
+                  <div className="flex space-x-2 mt-1">
+                    {["#4285F4", "#EA4335", "#FBBC05", "#34A853", "#8430CE", "#F06292"].map(color => (
+                      <div 
+                        key={color}
+                        className={`w-8 h-8 rounded-full cursor-pointer ${editedEvent.color === color ? 'ring-2 ring-offset-2 ring-blue-500' : ''}`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setEditedEvent({...editedEvent, color})}
+                      ></div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Description (optional)</label>
+                  <textarea
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
+                    rows="3"
+                    value={editedEvent.description}
+                    onChange={(e) => setEditedEvent({...editedEvent, description: e.target.value})}
+                    placeholder="Add description or notes"
+                  ></textarea>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="edit-completed"
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    checked={editedEvent.completed}
+                    onChange={(e) => setEditedEvent({...editedEvent, completed: e.target.checked})}
+                  />
+                  <label htmlFor="edit-completed" className="ml-2 block text-sm text-gray-700">
+                    Mark as completed
+                  </label>
+                </div>
+              </div>
+            )}
+            
+            <div className="mt-6 flex justify-between">
+              {!isEditing ? (
+                // View mode buttons
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => {
+                      toggleEventCompletion(selectedEvent.id);
+                      setSelectedEvent({
+                        ...selectedEvent, 
+                        completed: !selectedEvent.completed
+                      });
+                    }}
+                    className={`px-3 py-1 border rounded-md text-sm flex items-center ${
+                      selectedEvent.completed 
+                        ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
+                        : 'border-green-300 text-green-600 hover:bg-green-50'
+                    }`}
+                  >
+                    <FaCheck className="mr-1" size={12} />
+                    {selectedEvent.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to delete this event?')) {
+                        deleteEvent(selectedEvent.id);
+                        setShowEventPopup(false);
+                      }
+                    }}
+                    className="px-3 py-1 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-all duration-200 flex items-center"
+                  >
+                    <FaTrash className="mr-1" size={12} />
+                    Delete Event
+                  </button>
+                </div>
+              ) : (
+                // Edit mode buttons
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
                 </div>
               )}
               
-              <div className="flex items-center pt-2">
-                <div 
-                  className={`px-3 py-1 text-xs rounded-full mr-2 ${
-                    selectedEvent.completed 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-blue-100 text-blue-800'
-                  }`}
-                >
-                  {selectedEvent.completed ? '✓ Completed' : '⏳ Pending'}
-                </div>
-                
-                {/* Check for conflicts here properly */}
-                {(() => {
-                  const conflicts = detectEventConflicts(events).find(e => e.id === selectedEvent.id);
-                  const hasConflicts = conflicts && conflicts.conflictCount > 0;
-                  
-                  return hasConflicts ? (
-                    <div 
-                      className="px-3 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 cursor-pointer"
-                      onClick={() => showConflictDetails(selectedEvent, conflicts)}
-                    >
-                      ⚠️ Time Conflict ({conflicts.conflictCount})
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            </div>
-            
-            <div className="mt-6 flex justify-between">
-              <div className="flex space-x-2">
+              {!isEditing ? (
+                // Edit button in view mode
                 <button
                   onClick={() => {
-                    toggleEventCompletion(selectedEvent.id);
-                    setSelectedEvent({
-                      ...selectedEvent, 
-                      completed: !selectedEvent.completed
-                    });
+                    setEditedEvent({...selectedEvent});
+                    setIsEditing(true);
                   }}
-                  className={`px-3 py-1 border rounded-md text-sm flex items-center ${
-                    selectedEvent.completed 
-                      ? 'border-orange-300 text-orange-600 hover:bg-orange-50' 
-                      : 'border-green-300 text-green-600 hover:bg-green-50'
-                  }`}
+                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-all duration-200 flex items-center"
                 >
-                  <FaCheck className="mr-1" size={12} />
-                  {selectedEvent.completed ? 'Mark Incomplete' : 'Mark Complete'}
+                  <FaEdit className="mr-1" size={12} />
+                  Edit Event
                 </button>
-                
+              ) : (
+                // Save button in edit mode
                 <button
                   onClick={() => {
-                    if (window.confirm('Are you sure you want to delete this event?')) {
-                      deleteEvent(selectedEvent.id);
-                      setShowEventPopup(false);
-                    }
+                    // Update the event
+                    setEvents(events.map(e => 
+                      e.id === editedEvent.id ? editedEvent : e
+                    ));
+                    setSelectedEvent(editedEvent);
+                    setIsEditing(false);
                   }}
-                  className="px-3 py-1 border border-red-300 text-red-600 rounded-md hover:bg-red-50 transition-all duration-200"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={!editedEvent.title.trim()}
                 >
-                  <FaTrash className="mr-1" size={12} />
-                  Delete Event
+                  Save Changes
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
