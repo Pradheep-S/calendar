@@ -4,8 +4,9 @@ import isBetween from "dayjs/plugin/isBetween";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import { FaChevronLeft, FaChevronRight, FaPlus, FaCheck, FaTrash } from "react-icons/fa";
-import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, closestCenter, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
 
 // Add required dayjs plugins
 dayjs.extend(isBetween);
@@ -144,18 +145,22 @@ const Calendar = () => {
     setDraggedEvent(events.find(e => e.id.toString() === active.id));
   };
 
-  // Handle drag end - UPDATED CODE
+  // Handle drag end
   const handleDragEnd = (event) => {
     const { active, over } = event;
     
     if (over && active.id !== over.id) {
+      // Get the event from the dragged element
+      const draggedEventId = active.id;
+      const targetDate = over.id; // This should be a date string in format "YYYY-MM-DD"
+      
       // Update the event's date
       setEvents(prevEvents => 
-        prevEvents.map(e => {
-          if (e.id.toString() === active.id) {
-            return { ...e, date: over.id };
+        prevEvents.map(eventItem => {
+          if (eventItem.id.toString() === draggedEventId) {
+            return { ...eventItem, date: targetDate };
           }
-          return e;
+          return eventItem;
         })
       );
     }
@@ -175,6 +180,8 @@ const Calendar = () => {
       days.push(day);
       day = day.add(1, "day");
     }
+    
+    const [activeId, setActiveId] = useState(null);
 
     return (
       <DndContext 
@@ -196,75 +203,99 @@ const Calendar = () => {
             const dayEvents = events.filter(e => e.date === dateStr);
             const isToday = date.isSame(dayjs(), "day");
             const isCurrentMonth = date.month() === currentDate.month();
+            const styles = getMonthEventStyles(dayEvents);
 
             return (
-              <div 
-                key={dateStr} 
-                id={dateStr}
-                className={`min-h-[100px] p-1 border relative transition-all hover:bg-gray-50 
-                  ${isToday ? "bg-blue-50 border-blue-300" : ""} 
-                  ${!isCurrentMonth ? "text-gray-400 bg-gray-50" : ""}`}
-                onClick={() => handleOpenModal(date)}
+              <DroppableDay 
+                key={dateStr}
+                dateStr={dateStr}
+                isToday={isToday}
+                isCurrentMonth={isCurrentMonth}
+                onOpenModal={handleOpenModal}
               >
                 <div className={`text-sm font-semibold text-right p-1 ${isToday ? "text-blue-600" : ""}`}>
                   {date.date()}
                 </div>
                 <div className="overflow-y-auto max-h-[80px]">
-                  {(() => {
-                    const styles = getMonthEventStyles(dayEvents);
-                    return (
-                      <>
-                        {dayEvents.slice(0, styles.maxToShow).map((event) => (
-                          <DraggableEvent 
-                            key={event.id}
-                            event={event}
-                            getEventTime={getEventTime}
-                            toggleEventCompletion={toggleEventCompletion}
-                            deleteEvent={deleteEvent}
-                          />
-                        ))}
-                        {styles.hasMore && (
-                          <div 
-                            className="text-xs p-1 text-gray-600 cursor-pointer hover:bg-gray-100 rounded"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Show all events for this day
-                              alert(`${styles.moreCount} more events on ${date.format("MMMM D, YYYY")}`);
-                            }}
-                          >
-                            + {styles.moreCount} more
-                          </div>
-                        )}
-                      </>
-                    );
-                  })()}
+                  {dayEvents.slice(0, styles.maxToShow).map((event) => (
+                    <DraggableEvent 
+                      key={event.id}
+                      event={event}
+                      getEventTime={getEventTime}
+                      toggleEventCompletion={toggleEventCompletion}
+                      deleteEvent={deleteEvent}
+                    />
+                  ))}
+                  {styles.hasMore && (
+                    <div 
+                      className="text-xs p-1 text-gray-600 cursor-pointer hover:bg-gray-100 rounded"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Show all events for this day
+                        alert(`${styles.moreCount} more events on ${date.format("MMMM D, YYYY")}`);
+                      }}
+                    >
+                      + {styles.moreCount} more
+                    </div>
+                  )}
                 </div>
-                {/* Visual indicator when dragging over */}
-                {draggedEvent && (
-                  <div className="absolute inset-0 border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-40 pointer-events-none rounded-sm"></div>
-                )}
-              </div>
+              </DroppableDay>
             );
           })}
         </div>
+        
+        <DragOverlay>
+          {draggedEvent ? (
+            <div 
+              className="text-xs p-1 mb-1 rounded truncate flex items-center"
+              style={{ 
+                backgroundColor: draggedEvent.color || "#4285F4",
+                color: "white",
+                width: "150px",
+                boxShadow: "0 5px 10px rgba(0,0,0,0.2)"
+              }}
+            >
+              <div className="w-1.5 h-1.5 rounded-full bg-white mr-1 flex-shrink-0"></div>
+              <div className="truncate">
+                {getEventTime(draggedEvent)} {draggedEvent.title}
+              </div>
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     );
   };
 
   const DraggableEvent = ({ event, getEventTime, toggleEventCompletion, deleteEvent }) => {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+      id: event.id.toString(),
+      data: { event }
+    });
+
+    const style = transform ? {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+      opacity: isDragging ? 0.4 : 1,
+      backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
+      color: "white",
+      textDecoration: event.completed ? 'line-through' : 'none',
+      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none'
+    } : {
+      backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
+      color: "white",
+      textDecoration: event.completed ? 'line-through' : 'none',
+      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none'
+    };
+
     return (
       <div 
-        id={event.id.toString()}
-        draggable
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
         className={`text-xs p-1 mb-1 rounded truncate flex items-center group relative cursor-move
           ${event.completed ? 'opacity-70 border border-white' : ''}
+          ${isDragging ? 'z-50' : ''}
         `}
-        style={{ 
-          backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
-          color: "white",
-          textDecoration: event.completed ? 'line-through' : 'none',
-          backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none'
-        }}
+        style={style}
         onClick={(e) => {
           e.stopPropagation();
           // Show event details
@@ -275,31 +306,54 @@ const Calendar = () => {
           {getEventTime(event)} {event.title}
         </div>
         
-        {/* Action buttons that appear on hover */}
-        <div className="absolute right-1 hidden group-hover:flex space-x-1 bg-opacity-80 rounded">
-          <button 
-            className={`p-0.5 text-white ${event.completed ? 'hover:text-green-200' : 'hover:text-green-300'}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleEventCompletion(event.id);
-            }}
-            title={event.completed ? "Mark as not completed" : "Mark as completed"}
-          >
-            <FaCheck size={10} />
-          </button>
-          <button 
-            className="p-0.5 text-white hover:text-red-300"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (window.confirm('Are you sure you want to delete this event?')) {
-                deleteEvent(event.id);
-              }
-            }}
-            title="Delete event"
-          >
-            <FaTrash size={10} />
-          </button>
-        </div>
+        {!isDragging && (
+          <div className="absolute right-1 hidden group-hover:flex space-x-1 bg-opacity-80 rounded">
+            <button 
+              className={`p-0.5 text-white ${event.completed ? 'hover:text-green-200' : 'hover:text-green-300'}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleEventCompletion(event.id);
+              }}
+              title={event.completed ? "Mark as not completed" : "Mark as completed"}
+            >
+              <FaCheck size={10} />
+            </button>
+            <button 
+              className="p-0.5 text-white hover:text-red-300"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm('Are you sure you want to delete this event?')) {
+                  deleteEvent(event.id);
+                }
+              }}
+              title="Delete event"
+            >
+              <FaTrash size={10} />
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const DroppableDay = ({ dateStr, children, isToday, isCurrentMonth, onOpenModal }) => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: dateStr
+    });
+
+    return (
+      <div 
+        ref={setNodeRef}
+        className={`min-h-[100px] p-1 border relative transition-all hover:bg-gray-50 
+          ${isToday ? "bg-blue-50 border-blue-300" : ""} 
+          ${!isCurrentMonth ? "text-gray-400 bg-gray-50" : ""}
+          ${isOver ? "bg-blue-50 border-blue-300" : ""}`}
+        onClick={() => onOpenModal(dayjs(dateStr))}
+      >
+        {children}
+        {isOver && (
+          <div className="absolute inset-0 border-2 border-dashed border-blue-400 bg-blue-50 bg-opacity-40 pointer-events-none rounded-sm"></div>
+        )}
       </div>
     );
   };
