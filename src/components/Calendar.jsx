@@ -30,6 +30,8 @@ const Calendar = () => {
     color: "#4285F4", // Google blue
     completed: false,
   });
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+  const [conflictInfo, setConflictInfo] = useState(null);
 
   // Configure DnD sensors
   const sensors = useSensors(
@@ -272,18 +274,24 @@ const Calendar = () => {
       data: { event }
     });
 
+    // Check if this event has conflicts
+    const conflicts = detectEventConflicts(events).find(e => e.id === event.id);
+    const hasConflicts = conflicts && conflicts.conflictCount > 0;
+
     const style = transform ? {
       transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
       opacity: isDragging ? 0.4 : 1,
       backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
       color: "white",
       textDecoration: event.completed ? 'line-through' : 'none',
-      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none'
+      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none',
+      border: hasConflicts ? '2px dashed #FBBC05' : 'none'
     } : {
       backgroundColor: event.completed ? `${event.color}99` : event.color || "#4285F4",
       color: "white",
       textDecoration: event.completed ? 'line-through' : 'none',
-      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none'
+      backgroundImage: event.completed ? 'linear-gradient(rgba(255,255,255,0.2), rgba(255,255,255,0.2))' : 'none',
+      border: hasConflicts ? '2px dashed #FBBC05' : 'none'
     };
 
     return (
@@ -298,12 +306,18 @@ const Calendar = () => {
         style={style}
         onClick={(e) => {
           e.stopPropagation();
-          // Show event details
+          // Show conflict details if has conflicts
+          if (hasConflicts) {
+            showConflictDetails(event, conflicts);
+          }
         }}
       >
         <div className={`w-1.5 h-1.5 rounded-full ${event.completed ? 'bg-gray-300' : 'bg-white'} mr-1 flex-shrink-0`}></div>
-        <div className="truncate">
+        <div className="truncate flex items-center">
           {getEventTime(event)} {event.title}
+          {hasConflicts && (
+            <span className="ml-1 text-yellow-300 flex-shrink-0">⚠️</span>
+          )}
         </div>
         
         {!isDragging && (
@@ -816,6 +830,83 @@ const Calendar = () => {
     );
   };
 
+  // Enhanced conflict detection function that can be used across all views
+  const detectEventConflicts = (events) => {
+    const conflictMap = new Map();
+    
+    // First pass: identify all events
+    events.forEach(event => {
+      if (!event.time) return; // Skip all-day events
+      
+      const eventId = event.id.toString();
+      const [hours, minutes] = event.time.split(':').map(Number);
+      const durationMatch = event.duration?.match(/(\d+)([hm])/);
+      const durationHours = durationMatch ? 
+        (durationMatch[2] === 'h' ? Number(durationMatch[1]) : Number(durationMatch[1])/60) : 1;
+      
+      // Calculate start and end times in decimal hours
+      const startTime = hours + (minutes / 60);
+      const endTime = startTime + durationHours;
+      
+      if (!conflictMap.has(eventId)) {
+        conflictMap.set(eventId, {
+          event,
+          startTime,
+          endTime,
+          conflicts: new Set()
+        });
+      }
+    });
+    
+    // Second pass: detect conflicts
+    const entries = Array.from(conflictMap.entries());
+    for (let i = 0; i < entries.length; i++) {
+      const [id1, data1] = entries[i];
+      
+      for (let j = i + 1; j < entries.length; j++) {
+        const [id2, data2] = entries[j];
+        
+        // Check if events are on the same day
+        if (data1.event.date !== data2.event.date) continue;
+        
+        // Check for time overlap
+        if (
+          (data1.startTime >= data2.startTime && data1.startTime < data2.endTime) ||
+          (data1.endTime > data2.startTime && data1.endTime <= data2.endTime) ||
+          (data1.startTime <= data2.startTime && data1.endTime >= data2.endTime)
+        ) {
+          // We have a conflict
+          data1.conflicts.add(id2);
+          data2.conflicts.add(id1);
+        }
+      }
+    }
+    
+    // Convert to array with conflict count
+    return Array.from(conflictMap.values())
+      .filter(data => data.conflicts.size > 0)
+      .map(data => ({
+        ...data.event,
+        conflictCount: data.conflicts.size,
+        conflictIds: Array.from(data.conflicts)
+      }));
+  };
+
+  // Add this function to show conflict details
+  const showConflictDetails = (event, conflicts) => {
+    // Find the conflicting events
+    const conflictingEvents = events.filter(e => 
+      conflicts.conflictIds.includes(e.id.toString())
+    );
+    
+    setConflictInfo({
+      event,
+      conflictingEvents
+    });
+    
+    setShowConflictWarning(true);
+  };
+
   // Render appropriate view
   const renderCalendarView = () => {
     switch (activeView) {
@@ -1009,6 +1100,70 @@ const Calendar = () => {
                 disabled={!newEvent.title.trim()}
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Conflict Warning Modal */}
+      {showConflictWarning && conflictInfo && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold flex items-center">
+                <span className="text-yellow-500 mr-2">⚠️</span>
+                Time Conflict Detected
+              </h3>
+              <button onClick={() => setShowConflictWarning(false)} className="text-gray-500 hover:text-gray-700">
+                &times;
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-yellow-800">
+                  The event "<strong>{conflictInfo.event.title}</strong>" at {getEventTime(conflictInfo.event)} 
+                  conflicts with {conflictInfo.conflictingEvents.length} other event(s):
+                </p>
+              </div>
+              
+              <div className="max-h-60 overflow-y-auto">
+                {conflictInfo.conflictingEvents.map(event => (
+                  <div 
+                    key={event.id}
+                    className="flex items-center p-2 border-b"
+                  >
+                    <div 
+                      className="w-3 h-3 rounded-full mr-2" 
+                      style={{ backgroundColor: event.color || "#4285F4" }}
+                    ></div>
+                    <div>
+                      <div className="font-medium">{event.title}</div>
+                      <div className="text-sm text-gray-600">
+                        {dayjs(event.date).format("MMM D")} • {getEventTime(event)} ({event.duration})
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                You can:
+                <ul className="list-disc ml-5 mt-1 space-y-1">
+                  <li>Keep both events (they will display side by side)</li>
+                  <li>Reschedule one of the events</li>
+                  <li>Delete one of the events</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowConflictWarning(false)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                I Understand
               </button>
             </div>
           </div>
