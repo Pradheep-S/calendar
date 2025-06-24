@@ -1,0 +1,72 @@
+[
+  {
+    "id": 1,
+    "title": "Team Meeting",
+    "date": "2025-06-23",
+    "time": "10:00",
+    "duration": "1h",
+    "description": "Weekly team sync",
+    "color": "#4285F4",
+    "completed": false
+  },
+  {
+    "id": 2,
+    "title": "Lunch with Alex",
+    "date": "2025-06-23",
+    "time": "12:30",
+    "duration": "1h30m",
+    "description": "Meet at Cafe Central",
+    "color": "#34A853",
+    "completed": true
+  },
+  {
+    "id": 3,
+    "title": "Product Review",
+    "date": "2025-06-24",
+    "time": "14:00",
+    "duration": "1h",
+    "description": "Q2 roadmap discussion",
+    "color": "#EA4335",
+    "completed": false
+  },
+  {
+    "id": 4,
+    "title": "Dentist Appointment",
+    "date": "2025-06-25",
+    "time": "09:15",
+    "duration": "1h",
+    "description": "Annual checkup",
+    "color": "#FBBC05",
+    "completed": false
+  },
+  {
+    "id": 5,
+    "title": "Birthday Party",
+    "date": "2025-06-27",
+    "time": "18:00",
+    "duration": "3h",
+    "description": "Sarah's birthday celebration at Downtown Grill",
+    "color": "#8430CE",
+    "completed": false
+  },
+  {
+    "id": 6,
+    "title": "Gym Session",
+    "date": "2025-06-23",
+    "time": "17:30",
+    "duration": "1h",
+    "description": "Upper body workout",
+    "color": "#F06292",
+    "completed": true
+  },
+  {
+    "id": 7,
+    "title": "Project Deadline",
+    "date": "2025-06-30",
+    "time": "17:00",
+    "duration": "30m",
+    "description": "Submit final reports",
+    "color": "#EA4335",
+    "completed": false
+  }
+]
