@@ -141,7 +141,7 @@ const WeekView = ({
       onTouchEnd={onTouchEnd}
     >
       {/* Week header with days - Better for mobile */}
-      <div className={`grid ${isMobile ? 'grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]' : 'grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]'} border-b`}>
+      <div className={`grid ${isMobile ? 'grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]' : 'grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]'} border-b`}>
         <div className={`${isMobile ? 'p-1' : 'p-2'} border-r`}></div>
         {weekDays.map(day => {
           const isToday = day.isSame(dayjs(), "day");
@@ -151,7 +151,7 @@ const WeekView = ({
               className={`${isMobile ? 'p-1' : 'p-2'} text-center border-r ${isToday ? "bg-blue-50" : ""} cursor-pointer hover:bg-gray-50`}
               onClick={() => handleDayClick(day)}
             >
-              <div className="font-medium">{isMobile ? day.format("ddd").charAt(0) : day.format("ddd")}</div>
+              <div className="font-medium">{isMobile ? day.format("dd").charAt(0) : day.format("ddd")}</div>
               <div className={`text-sm ${isToday ? "bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center mx-auto" : ""}`}>
                 {day.date()}
               </div>
@@ -160,13 +160,14 @@ const WeekView = ({
         })}
       </div>
 
-      <div className={`grid ${isMobile ? 'grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]' : 'grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]'}`}>
+      <div className={`grid ${isMobile ? 'grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]' : 'grid-cols-[50px_1fr_1fr_1fr_1fr_1fr_1fr_1fr]'}`}>
         {/* Time column */}
         <div className="border-r">
           {hours.map(hour => (
             <div key={hour} className={`${isMobile ? 'h-10' : 'h-12'} border-b flex items-center justify-end`}>
-              <div className={`${isMobile ? 'text-[10px] pr-1' : 'text-xs pr-2'} text-gray-500`}>
-                {hour === 0 ? "" : `${hour % 12 || 12}${isMobile ? '' : hour < 12 ? "a" : "p"}`}
+              <div className={`${isMobile ? 'text-[8px] pr-1' : 'text-xs pr-2'} text-gray-500`}>
+                {hour === 0 ? "" : `${hour % 12 || 12}`}
+                {hour !== 0 && <span className="text-[6px] ml-0.5">{hour >= 12 ? 'pm' : 'am'}</span>}
               </div>
             </div>
           ))}
