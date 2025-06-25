@@ -205,6 +205,12 @@ const Calendar = () => {
     setDraggedEvent(null);
   };
 
+  // Add this function to ensure events open properly on mobile
+  const handleEventClick = (event) => {
+    setSelectedEvent(event);
+    setShowEventPopup(true);
+  };
+
   const renderCalendarView = () => {
     const viewProps = {
       currentDate,
@@ -219,7 +225,9 @@ const Calendar = () => {
       detectEventConflicts,
       // Add these for swipe navigation
       handlePrev,
-      handleNext
+      handleNext,
+      // Add for proper event handling
+      handleEventClick
     };
 
     switch (activeView) {
