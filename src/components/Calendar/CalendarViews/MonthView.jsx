@@ -75,7 +75,6 @@ const MonthView = ({
   // For swipe navigation
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
-  const [isSwiping, setIsSwiping] = useState(false);  // Add this state to track active swipe
 
   // Define sensors for DnD functionality
   const mouseSensor = useSensor(MouseSensor, {
@@ -118,27 +117,17 @@ const MonthView = ({
   const onTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientY); // Track Y position for vertical swipe
-    setIsSwiping(true); // Mark that we've started a potential swipe
   };
   
   const onTouchMove = (e) => {
     setTouchEnd(e.targetTouches[0].clientY); // Track Y position for vertical swipe
-    
-    // Prevent default scroll behavior during vertical swipe detection
-    if (isSwiping && !dayScrollingRef.current && Math.abs(e.targetTouches[0].clientY - touchStart) > 10) {
-      e.preventDefault();
-    }
   };
   
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) {
-      setIsSwiping(false);
-      return;
-    }
+    if (!touchStart || !touchEnd) return;
     
     // Skip if we're scrolling within a day cell with events
     if (dayScrollingRef.current) {
-      setIsSwiping(false);
       return;
     }
     
@@ -156,8 +145,6 @@ const MonthView = ({
       setTransitionDirection('down');
       handlePrev();
     }
-    
-    setIsSwiping(false);
   };
 
   // If handleDragStart wasn't passed, define a local one
