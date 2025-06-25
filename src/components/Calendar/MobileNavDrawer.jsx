@@ -76,7 +76,7 @@ const MobileNavDrawer = ({ onClose, activeView, views, setActiveView, currentDat
           </div>
           
           <div className="mt-6">
-            <h4 className="px-3 mb-2 text-xs uppercase font-medium text-gray-500">Today's Events</h4>
+            <h4 className="px-3 mb-2 text-xs uppercase font-medium text-gray-500">Today</h4>
             <div className="py-2 px-3 text-sm text-gray-500">
               {currentDate.format("MMMM D, YYYY")}
             </div>
