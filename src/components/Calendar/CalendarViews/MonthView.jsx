@@ -72,6 +72,29 @@ const MonthView = ({
   const isScrollingRef = useRef(false);
   const dayScrollingRef = useRef(false);
   
+  // For swipe navigation
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  // Define sensors for DnD functionality
+  const mouseSensor = useSensor(MouseSensor, {
+    // Require the mouse to move by 10 pixels before activating
+    activationConstraint: {
+      distance: 10,
+    },
+  });
+  
+  const touchSensor = useSensor(TouchSensor, {
+    // Press delay of 250ms, with tolerance of 5px of movement
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5,
+    },
+  });
+  
+  // Initialize sensors array
+  const sensors = useSensors(mouseSensor, touchSensor);
+
   // Check if the device is mobile based on window width
   useEffect(() => {
     const checkIfMobile = () => {
@@ -88,14 +111,41 @@ const MonthView = ({
     return () => window.removeEventListener('resize', checkIfMobile);
   }, []);
 
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: { distance: 10 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 250, tolerance: 5 },
-    })
-  );
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
+  
+  const onTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientY); // Track Y position for vertical swipe
+  };
+  
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientY); // Track Y position for vertical swipe
+  };
+  
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    // Skip if we're scrolling within a day cell with events
+    if (dayScrollingRef.current) {
+      return;
+    }
+    
+    const distance = touchStart - touchEnd;
+    const isUpSwipe = distance > minSwipeDistance;
+    const isDownSwipe = distance < -minSwipeDistance;
+    
+    if (isUpSwipe) {
+      // Swiping up - go to next month
+      setTransitionDirection('up');
+      handleNext();
+    }
+    if (isDownSwipe) {
+      // Swiping down - go to previous month
+      setTransitionDirection('down');
+      handlePrev();
+    }
+  };
 
   // If handleDragStart wasn't passed, define a local one
   const onDragStart = handleDragStart || ((event) => {
@@ -205,6 +255,9 @@ const MonthView = ({
           ${transitionDirection === 'down' ? 'animate-slideDownIn' : ''}`}
         ref={containerRef}
         onWheel={handleWheel}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <DndContext 
           sensors={sensors}
