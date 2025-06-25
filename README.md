@@ -1,4 +1,5 @@
 # Calendar App - Features & Functionality
+[Live demo](https://github.com/user-attachments/assets/a6a2caa6-d523-4c47-bd46-7c8b8fea1906)
 
 ## Overview
 A responsive React calendar application that provides multiple views and comprehensive event management capabilities.
