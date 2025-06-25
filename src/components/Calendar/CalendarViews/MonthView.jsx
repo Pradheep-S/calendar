@@ -258,6 +258,7 @@ const MonthView = ({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        style={{ overscrollBehavior: 'none',overflow: 'hidden' }}
       >
         <DndContext 
           sensors={sensors}

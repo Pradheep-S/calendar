@@ -37,7 +37,7 @@ const Calendar = () => {
     title: "",
     date: currentDate.format("YYYY-MM-DD"),
     time: "09:00",
-    duration: "1h",
+    duration: "1h", // This can now be "" for Anytime
     description: "",
     color: "#4285F4",
     completed: false,
@@ -130,7 +130,7 @@ const Calendar = () => {
       title: "",
       date: currentDate.format("YYYY-MM-DD"),
       time: "09:00",
-      duration: "1h",
+      duration: "1h", // This can now be "" for Anytime
       description: "",
       color: "#4285F4",
       completed: false

@@ -64,18 +64,71 @@ const CreateEventModal = ({
           
           <div>
             <label className="block text-sm font-medium text-gray-700">Duration</label>
-            <select
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2"
-              value={newEvent.duration}
-              onChange={(e) => setNewEvent({...newEvent, duration: e.target.value})}
-            >
-              <option value="30m">30 minutes</option>
-              <option value="1h">1 hour</option>
-              <option value="1h30m">1 hour 30 minutes</option>
-              <option value="2h">2 hours</option>
-              <option value="3h">3 hours</option>
-              <option value="4h">4 hours</option>
-            </select>
+            <div className="flex space-x-2 mt-1">
+              <select
+                className="flex-grow rounded-md border border-gray-300 px-3 py-2"
+                value={
+                  newEvent.duration === "" || 
+                  ["30m", "1h", "1h30m", "2h", "3h", "4h"].includes(newEvent.duration) 
+                    ? newEvent.duration 
+                    : "custom"
+                }
+                onChange={(e) => {
+                  if (e.target.value === "custom") {
+                    // When "Custom..." is selected, show the input field but keep previous value
+                    const prevValue = newEvent.duration;
+                    // Set a temporary value that won't match predefined options to show input
+                    setNewEvent({...newEvent, duration: prevValue === "" || 
+                      ["30m", "1h", "1h30m", "2h", "3h", "4h"].includes(prevValue) 
+                        ? "custom_" 
+                        : prevValue});
+                  } else {
+                    setNewEvent({...newEvent, duration: e.target.value});
+                  }
+                }}
+              >
+                <option value="">Anytime</option>
+                <option value="30m">30 minutes</option>
+                <option value="1h">1 hour</option>
+                <option value="1h30m">1 hour 30 minutes</option>
+                <option value="2h">2 hours</option>
+                <option value="3h">3 hours</option>
+                <option value="4h">4 hours</option>
+                <option value="custom">Custom...</option>
+              </select>
+              
+              {/* Show custom input field when not a standard option and not empty */}
+              {(newEvent.duration !== "" && 
+                !["30m", "1h", "1h30m", "2h", "3h", "4h"].includes(newEvent.duration)) && (
+                <input
+                  type="text"
+                  className="w-24 rounded-md border border-gray-300 px-3 py-2"
+                  placeholder="1h30m"
+                  value={newEvent.duration.startsWith("custom_") ? "" : newEvent.duration}
+                  onChange={(e) => setNewEvent({...newEvent, duration: e.target.value})}
+                  onFocus={(e) => {
+                    // Clear "custom_" prefix when focusing
+                    if (newEvent.duration.startsWith("custom_")) {
+                      setNewEvent({...newEvent, duration: ""});
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // Validate format on blur
+                    const val = e.target.value.trim();
+                    if (val === "") {
+                      // If empty, set to 1h default
+                      setNewEvent({...newEvent, duration: "1h"});
+                    } else if (!val.match(/^(\d+h)?(\d+m)?$/)) {
+                      // If invalid format, show error and set default
+                      alert("Please use format like: 1h, 30m, 1h30m");
+                      setNewEvent({...newEvent, duration: "1h"});
+                    }
+                  }}
+                  autoFocus
+                />
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-1">Format: 1h, 30m, 1h30m, etc.</p>
           </div>
           
           <div>

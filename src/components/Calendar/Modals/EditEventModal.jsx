@@ -136,18 +136,71 @@ const EditEventModal = ({
           
           <div>
             <label className="block text-xs font-medium text-gray-700">Duration</label>
-            <select
-              className="mt-1 block w-full rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
-              value={editedEvent.duration}
-              onChange={(e) => setEditedEvent({...editedEvent, duration: e.target.value})}
-            >
-              <option value="30m">30 minutes</option>
-              <option value="1h">1 hour</option>
-              <option value="1h30m">1 hour 30 minutes</option>
-              <option value="2h">2 hours</option>
-              <option value="3h">3 hours</option>
-              <option value="4h">4 hours</option>
-            </select>
+            <div className="flex space-x-2 mt-1">
+              <select
+                className="flex-grow rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
+                value={
+                  editedEvent.duration === "" || 
+                  ["30m", "1h", "1h30m", "2h", "3h", "4h"].includes(editedEvent.duration) 
+                    ? editedEvent.duration 
+                    : "custom"
+                }
+                onChange={(e) => {
+                  if (e.target.value === "custom") {
+                    // When "Custom..." is selected, show the input field but keep previous value
+                    const prevValue = editedEvent.duration;
+                    // Set a temporary value that won't match predefined options to show input
+                    setEditedEvent({...editedEvent, duration: prevValue === "" || 
+                      ["30m", "1h", "1h30m", "2h", "3h", "4h"].includes(prevValue) 
+                        ? "custom_" 
+                        : prevValue});
+                  } else {
+                    setEditedEvent({...editedEvent, duration: e.target.value});
+                  }
+                }}
+              >
+                <option value="">Anytime</option>
+                <option value="30m">30 minutes</option>
+                <option value="1h">1 hour</option>
+                <option value="1h30m">1 hour 30 minutes</option>
+                <option value="2h">2 hours</option>
+                <option value="3h">3 hours</option>
+                <option value="4h">4 hours</option>
+                <option value="custom">Custom...</option>
+              </select>
+              
+              {/* Show custom input field when not a standard option and not empty */}
+              {(editedEvent.duration !== "" && 
+                !["30m", "1h", "1h30m", "2h", "3h", "4h"].includes(editedEvent.duration)) && (
+                <input
+                  type="text"
+                  className="w-20 rounded-md border border-gray-300 px-2 py-1 sm:py-1.5 text-xs"
+                  placeholder="1h30m"
+                  value={editedEvent.duration.startsWith("custom_") ? "" : editedEvent.duration}
+                  onChange={(e) => setEditedEvent({...editedEvent, duration: e.target.value})}
+                  onFocus={(e) => {
+                    // Clear "custom_" prefix when focusing
+                    if (editedEvent.duration.startsWith("custom_")) {
+                      setEditedEvent({...editedEvent, duration: ""});
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // Validate format on blur
+                    const val = e.target.value.trim();
+                    if (val === "") {
+                      // If empty, set to 1h default
+                      setEditedEvent({...editedEvent, duration: "1h"});
+                    } else if (!val.match(/^(\d+h)?(\d+m)?$/)) {
+                      // If invalid format, show error and set default
+                      alert("Please use format like: 1h, 30m, 1h30m");
+                      setEditedEvent({...editedEvent, duration: "1h"});
+                    }
+                  }}
+                  autoFocus
+                />
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">Format: 1h, 30m, 1h30m, etc.</p>
           </div>
           
           <div>
